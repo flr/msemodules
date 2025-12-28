@@ -12,6 +12,8 @@ Depends:
   mse
 Imports:
   methods,
+  ggplot2,
+  ggplotFL,
   FLasher
 License: EUPL-1.2
 Encoding: UTF-8

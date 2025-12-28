@@ -2,20 +2,44 @@
 # msemodules/R/hcr.R
 
 # Copyright European Union, 2018
-# Author: Ernesto Jardim (EC JRC) <ernesto.jardim@ec.europa.eu>
-#         Iago Mosqueira (EC JRC) <iago.mosqueira@ec.europa.eu>
+# Author: Iago Mosqueira (WMR) <iago.mosqueira@wur.nl>
+#         Ernesto Jardim (IPMA) <ernesto.jardim@ipma.pt>
 #
 # Distributed under the terms of the European Union Public Licence (EUPL) V.1.1.
 
 
-globalVariables(c("ay", "bufflow", "buffup", "data_lag", "dy", "frq", "fy", "lim",
-  "management_lag", "min", "sloperatio"))
+globalVariables(c("ay", "bufflow", "buffupp", "data_lag", "dy", "frq", "fy", "iy",
+  "lim", "management_lag", "min", "mys", "sloperatio", "year"))
 
 # buffer.hcr {{{
 
+#' Buffer Harvest Control Rule (HCR)
+#'
+#' Implements a "buffer" style harvest control rule (HCR) using a metric (e.g., mean index or biomass)
+#' compared against defined buffer and limit reference points, with soft- and hard-caps and optional
+#' bounds on TAC changes.
+#'
+#' @param stk The 'oem' observation or SA estimation, an FLStock object.
+#' @param ind Possible indicators returned by the 'est' step, FLQuants.
+#' @param metric Character or function. The metric applied by theb rule as input.Default is `wmean`, returned by `cpue.ind`.
+#' @param target The desired target value for the metric, defaults to 1. Numeric or FLQuant.
+#' @param width Numeric. The width of the buffer zone surrounding the target. Default is `0.5`.
+#' @param lim Numeric. The lower threshold beyond which the HCR steeply reduces catch. Default is `max(target * 0.10, target - 2 * width)`.
+#' @param bufflow Numeric. The lower bound of the buffer range. Default is `max(lim * 1.50, target - width)`.
+#' @param buffupp Numeric. The upper bound of the buffer range. Default is `target + width`.
+#' @param sloperatio Numeric. Defines the slope for values exceeding the buffer's upper limit. Default is `0.15`.
+#' @param initial Numeric or `FLQuant`. The previous year's TAC value or another scaling factor for outputs.
+#' @param nyears Numeric. Number of years to use for windowing or smoothing metrics. Default is 4.
+#' @param dlow A limit for the decrease in the output variable, e.g. 0.85 for a maximum decrease of 15%, numeric. No limit is applied if NULL.
+#' @param dupp A limit for the increase in the output variable, e.g. 1.15 for a maximum increase of 15%, numeric. No limit is applied if NULL.
+#' @param all If `TRUE`, upper and lower limits (`dupp` and `dlow`) are applied unconditionally, otherwise only when metric > trigger, logical.
+#' @param ... Any extra arguments to be passed to the function computing 'metric'.
+#' @param args A list containing dimensionality arguments, passed on by mp().
+#' @param tracking An FLQuant used for tracking indicators, intermediate values, and decisions during MP evaluation.
+
 buffer.hcr <- function(stk, ind, metric='wmean',
   target=1, width=0.5, lim=max(target * 0.10, target - 2 * width), 
-  bufflow=maax(lim * 1.50, target - width), buffupp=target + width,
+  bufflow=max(lim * 1.50, target - width), buffupp=target + width,
   sloperatio=0.15, initial, nyears=4, dupp=NULL, dlow=NULL, all=TRUE,
   ..., args, tracking) {
 
@@ -93,6 +117,20 @@ buffer.hcr <- function(stk, ind, metric='wmean',
 # }}}
 
 # plot_buffer.hcr {{{
+
+#' @rdname buffer.hcr
+#' @details
+#' `plot_buffer.hcr` Plots the buffer harvest control rule (HCR) curve along with 
+#' optional observed values.
+#' @param args list. The list of parameters used by the buffer.hcr function.
+#' @param obs  Observed values to overlay on the plot.
+#' @param alpha Alpha transparency for observed points/lines.
+#' @param labels Labels for the plot annotations. A list with names among 'lim', 'bufflow', 'buffupp', 'metric', and 'output'.
+#' @param metric The metric name used for the x-axis label.
+#' @param output The output name used for the y-axis label.
+#' @param xlim The maximum x-axis limit for the plot.
+#' @param ylim The maximum y-axis limit for the plot.
+#' @return ggplot2 object
 
 plot_buffer.hcr <- function(args, obs="missing", alpha=0.3,
   labels=c(lim="limit", bufflow="Lower~buffer", buffupp="Upper~buffer",
@@ -206,6 +244,17 @@ plot_buffer.hcr <- function(args, obs="missing", alpha=0.3,
 
 # depletion.hcr {{{
 
+#' Depletion Harvest Control Rule (HCR)
+#'
+#' Implements a depletion-based harvest control rule (HCR), adjusting harvest rates and TAC (Total Allowable Catch)
+#' based on stock status relative to depletion thresholds.
+#'
+#' @param stk `FLStock`. The stock object to which the HCR applies.
+#' @param ind `FLQuant`. The abundance index used as input for computing adjustments.
+#' @param metric Character or function. The metric applied to measure stock status. Default is `'ssb'` (spawning stock biomass).
+#' @param mult Numeric. A scaling multiplier for adjusting the harvest rate. Default is `1`.
+#' @param hrmsy Numeric. Harvest rate that achieves maximum sustainable yield (MSY
+
 depletion.hcr <- function(stk, ind, metric='ssb', mult=1, hrmsy, K,
   trigger=0.4, lim=0.1, min=0.00001, dupp=NULL, dlow=NULL, all=TRUE,
   ..., args, tracking) {
@@ -284,21 +333,15 @@ depletion.hcr <- function(stk, ind, metric='ssb', mult=1, hrmsy, K,
 
 # pid.hcr {{{
 
-#' @param stk
-#' @param ind
-#' @param kp
-#' @param ki
-#' @param kd
-#' @param nyears Number of years used in regression of log(stock).
+#' Proportional-Integral-Derivative (PID) Harvest Control Rule (HCR)
+#'
+#' Implements a Proportional-Integral-Derivative (PID) based harvest control rule for adjusting 
+#' Total Allowable Catch (TAC) based on divergence from a reference point using PID control signals.
+#'
+#' @param stk `FLStock`. The stock object to which the HCR applies.
+#' @param ind `FLQuant`. The abundance index used to compute the control signal.
+#' @param ref Numeric. The reference value for the metric to determine divergence.
 #' @param metric
-#' @param ref
-#' @examples
-#' #control <- mpCtrl(list(
-#' #  est = mseCtrl(method=perfect.sa),
-#' #  hcr = mseCtrl(method=pid.hcr,
-#' #   args=list(metric=ssb, ref=refpts(om)$SBMSY, kp=0.5, ki=0.01, kd=0.7))))
-#' # tes <- mp(om, oem=oem, ctrl=control, args=list(iy=2017))
-#' # plot(om, PID=tes)
 
 pid.hcr <- function(stk, ind, ref, metric=ssb, initial, kp=0, ki=0, kd=0,
   nyears=5, dlow=NA, dupp=NA, args, tracking, ...) {
@@ -337,9 +380,9 @@ pid.hcr <- function(stk, ind, ref, metric=ssb, initial, kp=0, ki=0, kd=0,
 
   # LIMITS over previous output
   if(!is.na(dupp))
-    tac[tac > pre * dupp] <- pre[tac > pre * dupp] * dupp
+    tac[tac > initial * dupp] <- initial[tac > initial * dupp] * dupp
   if(!is.na(dlow))
-    tac[tac < pre * dlow] <- pre[tac < pre * dlow] * dlow
+    tac[tac < initial * dlow] <- initial[tac < initial * dlow] * dlow
 
   # CONTROL
   ctrl <- fwdControl(

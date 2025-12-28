@@ -1,9 +1,22 @@
 import("methods")
 import("FLCore")
+import("ggplotFL")
 import("mse")
 
 importFrom("FLasher",
   "fwdControl")
+
+importFrom("ggplot2",
+  "aes",
+  "annotate",
+  "coord_cartesian",
+  "geom_label",
+  "geom_line",
+  "geom_path",
+  "geom_point",
+  "xlab",
+  "ylab"
+  )
 
 export(
   "buffer.hcr",
