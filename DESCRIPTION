@@ -1,0 +1,19 @@
+Package: msemodules
+Title: Modules and Functions for the mse Package
+Version: 0.0.0.9001
+Authors@R:
+    person("Iago", "Mosqueira", , "iago.mosqueira@wur.nl", role = c("aut", "cre"),
+      comment = c(ORCID = "0000-0002-3252-0591"))
+Description: A number of additional modules and auxiliary functions for the 'mse' package are provided here.
+URL: https://msemodules.flrproject.org/, https://github.com/flr/msemodules
+BugReports: https://github.com/flr/msemodules/issues
+Depends:
+  FLCore,
+  mse
+Imports:
+  methods,
+  FLasher
+License: EUPL-1.2
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
