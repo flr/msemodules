@@ -27,6 +27,8 @@ pid.hcr(
 \item{ind}{\code{FLQuant}. The abundance index used to compute the control signal.}
 
 \item{ref}{Numeric. The reference value for the metric to determine divergence.}
+
+\item{metric}{Character or function. The metric applied to measure stock status. Default is \code{'ssb'} (spawning stock biomass).}
 }
 \description{
 Implements a Proportional-Integral-Derivative (PID) based harvest control rule for adjusting
