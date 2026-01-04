@@ -8,16 +8,16 @@
 # Distributed under the terms of the European Union Public Licence (EUPL) V.1.1.
 
 
-globalVariables(c("ay", "bufflow", "buffupp", "data_lag", "dy", "frq", "fy", "iy",
-  "lim", "management_lag", "min", "mys", "sloperatio", "year"))
+globalVariables(c(".", "ay", "bufflow", "buffupp", "data_lag", "data",
+  "dy", "frq", "fy", "iy", "lim", "management_lag", "min", "mys",
+  "element", "label", "run", "statistic", "sloperatio", "year"))
 
 # buffer.hcr {{{
 
 #' Buffer Harvest Control Rule (HCR)
 #'
-#' Implements a "buffer" style harvest control rule (HCR) using a metric (e.g., mean index or biomass)
-#' compared against defined buffer and limit reference points, with soft- and hard-caps and optional
-#' bounds on TAC changes.
+#' Implements a "buffer" style harvest control rule (HCR) to set changes in catch levels by using a given metric, such as the value of an index of abundance, or an estimate of biomass. This is compared with some defined buffer and limit reference points, to compute a multiplier that will set future catches from previous levels.
+#' with optional bounds on TAC changes.
 #'
 #' @param stk The 'oem' observation or SA estimation, an FLStock object.
 #' @param ind Possible indicators returned by the 'est' step, FLQuants.
@@ -32,10 +32,10 @@ globalVariables(c("ay", "bufflow", "buffupp", "data_lag", "dy", "frq", "fy", "iy
 #' @param nyears Numeric. Number of years to use for windowing or smoothing metrics. Default is 4.
 #' @param dlow A limit for the decrease in the output variable, e.g. 0.85 for a maximum decrease of 15%, numeric. No limit is applied if NULL.
 #' @param dupp A limit for the increase in the output variable, e.g. 1.15 for a maximum increase of 15%, numeric. No limit is applied if NULL.
-#' @param all If `TRUE`, upper and lower limits (`dupp` and `dlow`) are applied unconditionally, otherwise only when metric > trigger, logical.
+#' @param all If `TRUE`, upper and lower limits (`dupp` and `dlow`) are applied unconditionally, otherwise only when metric > bufflow, logical.
 #' @param ... Any extra arguments to be passed to the function computing 'metric'.
 #' @param args A list containing dimensionality arguments, passed on by mp().
-#' @param tracking An FLQuant used for tracking indicators, intermediate values, and decisions during MP evaluation.
+#' @param tracking A data.table used for tracking indicators, intermediate values, and decisions during MP evaluation.
 
 buffer.hcr <- function(stk, ind, metric='wmean',
   target=1, width=0.5, lim=max(target * 0.10, target - 2 * width), 
@@ -44,7 +44,7 @@ buffer.hcr <- function(stk, ind, metric='wmean',
   ..., args, tracking) {
 
   # EXTRACT args
-  spread(args)
+  spread(args, c("dy", "ay", "mys"))
 
   # COMPUTE and window metric
   met <- yearMeans(window(selectMetric(metric, stk, ind, ...),
@@ -341,7 +341,7 @@ depletion.hcr <- function(stk, ind, metric='ssb', mult=1, hrmsy, K,
 #' @param stk `FLStock`. The stock object to which the HCR applies.
 #' @param ind `FLQuant`. The abundance index used to compute the control signal.
 #' @param ref Numeric. The reference value for the metric to determine divergence.
-#' @param metric
+#' @param metric Character or function. The metric applied to measure stock status. Default is `'ssb'` (spawning stock biomass).
 
 pid.hcr <- function(stk, ind, ref, metric=ssb, initial, kp=0, ki=0, kd=0,
   nyears=5, dlow=NA, dupp=NA, args, tracking, ...) {
