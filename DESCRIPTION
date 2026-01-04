@@ -1,6 +1,6 @@
 Package: msemodules
 Title: Modules and Functions for the mse Package
-Version: 0.0.0.9001
+Version: 0.0.0.9002
 Authors@R:
     person("Iago", "Mosqueira", , "iago.mosqueira@wur.nl", role = c("aut", "cre"),
       comment = c(ORCID = "0000-0002-3252-0591"))
@@ -14,7 +14,8 @@ Imports:
   methods,
   ggplot2,
   ggplotFL,
-  FLasher
+  FLasher,
+  data.table
 License: EUPL-1.2
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
