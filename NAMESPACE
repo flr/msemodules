@@ -2,6 +2,10 @@ import("methods")
 import("FLCore")
 import("ggplotFL")
 import("mse")
+import("data.table")
+
+importFrom("stats",
+  "dist")
 
 importFrom("FLasher",
   "fwdControl")
@@ -22,4 +26,15 @@ export(
   "buffer.hcr",
   "depletion.hcr",
   "pid.hcr",
-  "plot_buffer.hcr")
+  "plot_buffer.hcr",
+  "shortcut.sa",
+  "shortcut_devs",
+  "writePerformance",
+  "readPerformance",
+  "summaryPerformance",
+  "labelPerformance",
+  "setLabelPerformance",
+  "periodsPerformance",
+  "extractPerformance",
+  "getOMPerformance",
+  "getMSEPerformance")
