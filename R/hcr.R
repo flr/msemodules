@@ -72,13 +72,22 @@ buffer.hcr <- function(stk, ind, metric='wmean',
   
   track(tracking, "tier.hcr", ay) <- tier
 
-  # GET previous TAC
-  if(ay > iy) {
-     initial <- tracking[[1]]['hcr', ac(ay)]
+  # GET previous output value if change limited
+  if(!is.null(dupp) | !is.null(dlow)) {
+    # GET initial value at start if set,
+    if(ay == iy) {
+      # STOP if initial is NULL
+      if(is.null(initial))
+        stop("To apply 'dlow' and 'dupp' limits, 'initial' is required")
+      pre <- FLQuant(initial, iter=args$it)
+    # OR previous decision,
+    } else {
+      pre <- tracking[metric == 'hcr' & year == ay, data]
+    }
   }
 
   # SET TAC
-  out <- initial * dec
+  out <- pre * dec
   
   # TRACK first decision
   track(tracking, "output.hcr", mys) <- out
@@ -86,21 +95,21 @@ buffer.hcr <- function(stk, ind, metric='wmean',
   # APPLY limits, always or if met < trigger
   if(!is.null(dupp)) {
     if(all) {
-      out[out > initial * dupp] <-
-        initial[out > initial * dupp] * dupp
+      out[out > pre * dupp] <-
+        pre[out > pre * dupp] * dupp
     } else {
-      out[out > initial * dupp & met > bufflow] <-
-        initial[out > initial * dupp & met > bufflow] * dupp
+      out[out > pre * dupp & met > bufflow] <-
+        pre[out > pre * dupp & met > bufflow] * dupp
     }
   }
 
   if(!is.null(dlow)) {
     if(all) {
-      out[out < initial * dlow] <-
-        initial[out < initial * dlow] * dlow
+      out[out < pre * dlow] <-
+        pre[out < pre * dlow] * dlow
     } else {
-      out[out < initial * dlow & met > bufflow] <-
-        initial[out < initial * dlow & met > bufflow] * dlow
+      out[out < pre * dlow & met > bufflow] <-
+        pre[out < pre * dlow & met > bufflow] * dlow
     }
   }
 
