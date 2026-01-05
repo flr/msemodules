@@ -72,12 +72,6 @@ buffer.hcr <- function(stk, ind, metric='wmean',
   
   track(tracking, "tier.hcr", ay) <- tier
 
-    # SET TAC
-  out <- pre * dec
-  
-  # TRACK first decision
-  track(tracking, "output.hcr", mys) <- out
-
   # GET previous output value if change limited
   if(!is.null(dupp) | !is.null(dlow)) {
     # GET initial value at start if set,
@@ -91,6 +85,12 @@ buffer.hcr <- function(stk, ind, metric='wmean',
       pre <- tracking[metric == 'hcr' & year == ay, data]
     }
   }
+
+  # SET TAC
+  out <- pre * dec
+  
+  # TRACK first decision
+  track(tracking, "output.hcr", mys) <- out
 
   # APPLY limits, always or if met < trigger
   if(!is.null(dupp)) {
