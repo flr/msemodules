@@ -72,6 +72,12 @@ buffer.hcr <- function(stk, ind, metric='wmean',
   
   track(tracking, "tier.hcr", ay) <- tier
 
+    # SET TAC
+  out <- pre * dec
+  
+  # TRACK first decision
+  track(tracking, "output.hcr", mys) <- out
+
   # GET previous output value if change limited
   if(!is.null(dupp) | !is.null(dlow)) {
     # GET initial value at start if set,
@@ -85,12 +91,6 @@ buffer.hcr <- function(stk, ind, metric='wmean',
       pre <- tracking[metric == 'hcr' & year == ay, data]
     }
   }
-
-  # SET TAC
-  out <- pre * dec
-  
-  # TRACK first decision
-  track(tracking, "output.hcr", mys) <- out
 
   # APPLY limits, always or if met < trigger
   if(!is.null(dupp)) {
@@ -265,76 +265,83 @@ plot_buffer.hcr <- function(args, obs="missing", alpha=0.3,
 #' @param hrmsy Numeric. Harvest rate that achieves maximum sustainable yield (MSY
 
 depletion.hcr <- function(stk, ind, metric='ssb', mult=1, hrmsy, K,
-  trigger=0.4, lim=0.1, min=0.00001, dupp=NULL, dlow=NULL, all=TRUE,
+  trigger=0.4, lim=0.1, min=0.00001, initial, dupp=NULL, dlow=NULL, all=TRUE,
   ..., args, tracking) {
 
   # EXTRACT args
-  ay <- args$ay
-  iy <- args$iy
-  data_lag <- args$data_lag
-  man_lag <- args$management_lag
-  frq <- args$frq
-
-  # SET data year
-  dy <- ay - data_lag
-  # SET control years
-  cys <- seq(ay + man_lag, ay + man_lag + frq - 1)
+  spread(args[c('ay', 'iy', 'dy', 'mys', 'data_lag', 'management_lag', 'it')])
 
   # COMPUTE and window metric
-  met <- mse::selectMetric(metric, stk, ind)
-  met <- window(met, start=dy, end=dy)
+  met <- window(selectMetric(metric, stk, ind), start=dy, end=dy)
+
+  # TRACK metric
+  track(tracking, "metric.hcr", dy) <- met
 
   # COMPUTE HCR multiplier if ...
-  hcrm <- ifelse((met / K) >= trigger, 1,
+  dec <- ifelse((met / K) >= trigger, 1,
     # metric betwween lim and trigger, and above
     ifelse((met / K) >= lim,      
       ((met / K) - lim) / (trigger - lim), min))
 
+  # TRACK initial output
+  track(tracking, "decision.hcr", mys) <- dec
+
   # TRACK decision
-  dec <- cut((met / K), c(0, lim, trigger, Inf), labels=seq(1, 3))
-  # track(tracking, "decision.hcr", ay) <- as.numeric(dec)
+  tier <- cut((met / K), c(0, lim, trigger, Inf), labels=seq(1, 3))
+
+  track(tracking, "tier.hcr", ay) <- as.numeric(tier)
 
   # SET HR target
-  hrtarget <- hrmsy * hcrm * mult
+  hrtarget <- hrmsy * dec * mult
 
   # SET TAC
   out <- met * hrtarget
 
   # TRACK first decision
-  track(tracking, "rule.hcr", cys) <- out
+  track(tracking, "output.hcr", mys) <- out
 
-  # TODO: ADD initac and TAC from tracking
-  lastcatch <- unitSums(seasonSums(window(catch(stk), start=dy, end=dy)))
+  # GET previous output value if change limited
+  if(!is.null(dupp) | !is.null(dlow)) {
+    # GET initial value at start if set,
+    if(ay == iy) {
+      # STOP if initial is NULL
+      if(is.null(initial))
+        stop("To apply 'dlow' and 'dupp' limits, 'initial' is required")
+      pre <- FLQuant(initial, iter=args$it)
+    # OR previous decision,
+    } else {
+      pre <- tracking[metric == 'hcr' & year == ay, data]
+    }
+  }
 
   # APPLY limits, always or if met < trigger
   if(!is.null(dupp)) {
     if(all) {
-      out[out > lastcatch * dupp] <-
-        lastcatch[out > lastcatch * dupp] * dupp
+      out[out > pre * dupp] <-
+        pre[out > pre * dupp] * dupp
     } else {
-      out[out > lastcatch * dupp & met < trigger] <-
-        lastcatch[out > lastcatch * dupp & met < trigger] * dupp
+      out[out > pre * dupp & met < trigger] <-
+        pre[out > pre * dupp & met < trigger] * dupp
     }
   }
 
   if(!is.null(dlow)) {
     if(all) {
-      out[out < lastcatch * dlow] <-
-        lastcatch[out < lastcatch * dlow] * dlow
+      out[out < pre * dlow] <-
+        pre[out < pre * dlow] * dlow
     } else {
-      out[out < lastcatch * dlow & met < trigger] <-
-        lastcatch[out < lastcatch * dlow & met < trigger] * dlow
+      out[out < pre * dlow & met < trigger] <-
+        pre[out < pre * dlow & met < trigger] * dlow
     }
   }
 
-  # TRACK TAC limited
-  # sum(old > out)
-  # sum(old < out)
+  # SUBSTITUTE NAs for 0
+  out <- ifelse(is.na(out), 0, out)
 
   # CONTROL
   ctrl <- fwdControl(
     # TARGET for frq years
-    c(lapply(cys, function(x) list(quant="catch", value=c(out), year=x))))
+    c(lapply(mys, function(x) list(quant="catch", value=c(out), year=x))))
 	
   list(ctrl=ctrl, tracking=tracking)
 }
