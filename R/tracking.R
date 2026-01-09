@@ -79,9 +79,12 @@ inspect <- function(tab, metrics=NULL, summary=medmad) {
     }
   }
 
+  # SET columns to return
+  cols <- c("year", metord)
+
   # RESHAPE and REORDER
   res <- dcast(tab[metric %in% metord, .(data=summary(data)), by=.(year, metric)],
-    year ~ metric, value.var='data')[, ..metord]
+    year ~ metric, value.var='data')[, ..cols]
 
   return(res)
 }
