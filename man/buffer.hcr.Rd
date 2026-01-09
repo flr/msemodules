@@ -20,6 +20,7 @@ buffer.hcr(
   dupp = NULL,
   dlow = NULL,
   all = TRUE,
+  scale = FALSE,
   ...,
   args,
   tracking
@@ -64,13 +65,13 @@ plot_buffer.hcr(
 
 \item{dlow}{A limit for the decrease in the output variable, e.g. 0.85 for a maximum decrease of 15\%, numeric. No limit is applied if NULL.}
 
-\item{all}{If \code{TRUE}, upper and lower limits (\code{dupp} and \code{dlow}) are applied unconditionally, otherwise only when metric > trigger, logical.}
+\item{all}{If \code{TRUE}, upper and lower limits (\code{dupp} and \code{dlow}) are applied unconditionally, otherwise only when metric > bufflow, logical.}
 
 \item{...}{Any extra arguments to be passed to the function computing 'metric'.}
 
 \item{args}{list. The list of parameters used by the buffer.hcr function.}
 
-\item{tracking}{An FLQuant used for tracking indicators, intermediate values, and decisions during MP evaluation.}
+\item{tracking}{A data.table used for tracking indicators, intermediate values, and decisions during MP evaluation.}
 
 \item{obs}{Observed values to overlay on the plot.}
 
@@ -88,9 +89,8 @@ plot_buffer.hcr(
 ggplot2 object
 }
 \description{
-Implements a "buffer" style harvest control rule (HCR) using a metric (e.g., mean index or biomass)
-compared against defined buffer and limit reference points, with soft- and hard-caps and optional
-bounds on TAC changes.
+Implements a "buffer" style harvest control rule (HCR) to set changes in catch levels by using a given metric, such as the value of an index of abundance, or an estimate of biomass. This is compared with some defined buffer and limit reference points, to compute a multiplier that will set future catches from previous levels.
+with optional bounds on TAC changes.
 }
 \details{
 \code{plot_buffer.hcr} Plots the buffer harvest control rule (HCR) curve along with

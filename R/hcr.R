@@ -40,7 +40,7 @@ globalVariables(c(".", "ay", "bufflow", "buffupp", "data_lag", "data",
 buffer.hcr <- function(stk, ind, metric='wmean',
   target=1, width=0.5, lim=max(target * 0.10, target - 2 * width), 
   bufflow=max(lim * 1.50, target - width), buffupp=target + width,
-  sloperatio=0.15, initial, nyears=4, dupp=NULL, dlow=NULL, all=TRUE,
+  sloperatio=0.15, initial, nyears=4, dupp=NULL, dlow=NULL, all=TRUE, scale=FALSE,
   ..., args, tracking) {
 
   # EXTRACT args
@@ -66,24 +66,18 @@ buffer.hcr <- function(stk, ind, metric='wmean',
   # TRACK rule decision
   track(tracking, "decision.hcr", ay) <- as.numeric(dec)
 
-  # TRACK rule classification
+  # TRACK rule classification (tier)
   tier <- as.numeric(cut(met, c(0, lim, bufflow, buffupp, Inf), labels=seq(1,4)))
   tier[is.na(tier)] <- 0
-  
   track(tracking, "tier.hcr", ay) <- tier
 
+
+  # GET starting output
+  pre <- FLQuant(initial, iter=args$it)
+
   # GET previous output value if change limited
-  if(!is.null(dupp) | !is.null(dlow)) {
-    # GET initial value at start if set,
-    if(ay == iy) {
-      # STOP if initial is NULL
-      if(is.null(initial))
-        stop("To apply 'dlow' and 'dupp' limits, 'initial' is required")
-      pre <- FLQuant(initial, iter=args$it)
-    # OR previous decision,
-    } else {
+  if(ay > iy & !scale) {
       pre <- tracking[metric == 'hcr' & year == ay, data]
-    }
   }
 
   # SET TAC

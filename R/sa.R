@@ -30,9 +30,6 @@ shortcut.sa <- function(stk, idx, metric="ssb", SSBdevs=ind %=% 1, devs=SSBdevs,
   # TRACK 'convergence'
   track(tracking, "conv.est", ay) <- 1
  
-  # TRACK last year ind w/ deviances
-  track(tracking, "ind.est", ay) <- ind[[1]][, ac(dy)]
-
   list(stk=stk, ind=ind, tracking=tracking)
 }
 

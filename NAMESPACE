@@ -5,7 +5,8 @@ import("mse")
 import("data.table")
 
 importFrom("stats",
-  "dist")
+  "dist",
+  "mad")
 
 importFrom("FLasher",
   "fwdControl")
@@ -23,18 +24,22 @@ importFrom("ggplot2",
   )
 
 export(
+  "bank_borrow.is",
   "buffer.hcr",
   "depletion.hcr",
+  "extractPerformance",
+  "getMSEPerformance",
+  "getOMPerformance",
+  "inspect",
+  "labelPerformance",
+  "medmad",
+  "periodsPerformance",
   "pid.hcr",
   "plot_buffer.hcr",
+  "readPerformance",
+  "setLabelPerformance",
   "shortcut.sa",
   "shortcut_devs",
-  "writePerformance",
-  "readPerformance",
   "summaryPerformance",
-  "labelPerformance",
-  "setLabelPerformance",
-  "periodsPerformance",
-  "extractPerformance",
-  "getOMPerformance",
-  "getMSEPerformance")
+  "writePerformance"
+  )

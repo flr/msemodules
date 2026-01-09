@@ -14,6 +14,7 @@ depletion.hcr(
   trigger = 0.4,
   lim = 0.1,
   min = 1e-05,
+  initial,
   dupp = NULL,
   dlow = NULL,
   all = TRUE,
