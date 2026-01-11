@@ -32,7 +32,7 @@ medmad <- function(x) paste0(format(median(x), digits=3), " (",
 #'   - Reshapes the processed `data.table` into a year-by-metrics format for easy reading.
 #' }
 #'
-#' The predefined metric order is: `"om"`, `"obs"`, `"est"`, `"ind"`, `"phcr"`, `"hcr"`, `"isys"`, `"tm"`, `"iem"`, `"fb"`, `"fwd"`. Extra tracks produced inside any module are placed following the one named after the module that produced it.
+#' The predefined metric order is that of the various steps inside `mp()`: `"om"`, `"obs"`, `"est"`, `"ind"`, `"phcr"`, `"hcr"`, `"isys"`, `"tm"`, `"iem"`, `"fb"`, `"fwd"`. Extra tracks produced inside any module are placed following the one named after the module that produced it.
 #'
 #' @return A `data.table` where rows correspond to years and columns to selected metrics, with the tracking `data` aggregated using the specified summary function.
 #'

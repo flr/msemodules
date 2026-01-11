@@ -23,6 +23,8 @@ ctrl <- mpCtrl(
     args=list(metric='depletion', lim=0.20, bufflow=0.35, buffupp=0.55, sloperatio=0.15,
     nyears=1, initial=mean(catch(om)[, ac(iy)]), B0=refpts(om)$B0 * 0.92)))
 
+run <- mp(om, ctrl=ctrl, args=list(iy=iy, frq=1))
+
 ctrl <- mpCtrl(
   est = mseCtrl(method=perfect.sa),
   hcr = mseCtrl(method=hockeystick.hcr,

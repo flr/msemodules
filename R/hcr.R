@@ -70,9 +70,6 @@ buffer.hcr <- function(stk, ind, metric='wmean',
   tier <- as.numeric(cut(met, c(0, lim, bufflow, buffupp, Inf), labels=seq(1,4)))
   tier[is.na(tier)] <- 0
   track(tracking, "tier.hcr", ay) <- tier
-
-
-  # GET starting output
   pre <- FLQuant(initial, iter=args$it)
 
   # GET previous output value if change limited
@@ -84,7 +81,7 @@ buffer.hcr <- function(stk, ind, metric='wmean',
   out <- pre * dec
   
   # TRACK first decision
-  track(tracking, "output.hcr", mys) <- out
+  track(tracking, "output.hcr", ay) <- out
 
   # APPLY limits, always or if met < trigger
   if(!is.null(dupp)) {
