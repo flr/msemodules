@@ -43,8 +43,8 @@ buffer.hcr <- function(stk, ind, metric='wmean',
   sloperatio=0.15, initial, nyears=4, dupp=NULL, dlow=NULL, all=TRUE, scale=FALSE,
   ..., args, tracking) {
 
-  # EXTRACT args
-  spread(args, c("dy", "ay", "mys"))
+  # EXTRACT args: dy, ay, mys, frq)
+  spread(args)
 
   # COMPUTE and window metric
   met <- yearMeans(window(selectMetric(metric, stk, ind, ...),
@@ -70,12 +70,14 @@ buffer.hcr <- function(stk, ind, metric='wmean',
   tier <- as.numeric(cut(met, c(0, lim, bufflow, buffupp, Inf), labels=seq(1,4)))
   tier[is.na(tier)] <- 0
   track(tracking, "tier.hcr", ay) <- tier
-  pre <- FLQuant(initial, iter=args$it)
 
   # GET previous output value if change limited
+  
+  pre <- FLQuant(initial, iter=args$it)
+  
   if(ay > iy & !scale) {
-      pre <- tracking[metric == 'hcr' & year == ay, data]
-  }
+      pre <- tracking[metric == 'hcr' & year == ay - frq, data]
+  } 
 
   # SET TAC
   out <- pre * dec
@@ -402,3 +404,47 @@ pid.hcr <- function(stk, ind, ref, metric=ssb, initial, kp=0, ki=0, kd=0,
 }
 
 # }}}
+
+# cpue.hcr
+
+cpue.hcr <- function(stk, ind, k1=0.2, k2=0.2, k3=0.2, k4=0.2, target=1,
+  dtaclow=0.85, dtacupp=1.15, initac=NULL, slope="slope", mean="mean",
+  args, tracking) {
+
+  # args
+  ay <- args$ay
+  frq <- args$frq
+  man_lag <- args$management_lag
+
+  # RECOVER slope & mean(cpue)
+  slope <- ind[[slope]]
+  mcpue <- ind[[mean]]
+
+  # CALCULATE new tac
+  ka <- ifelse(slope > 0, k1, k2)
+  kb <- ifelse(mcpue > target, k3, k4)
+
+  # GET previous TAC from last hcr ...
+  if(is.null(initac)) {
+    tac <- areaSums(seasonSums(tracking[[1]]['hcr', ac(ay)]))
+    # ... OR catch
+    if(all(is.na(tac)))
+      tac <- areaSums(seasonSums(catch(stk)[, ac(ay - args$data_lag)]))
+  } else {
+    tac <- initac
+  }
+
+  # TAC_y-1 ~ TAC_y * 1 + ka * m + kb * (mcpue - target)
+  tac <- tac * (1 + ka * slope + kb * (mcpue - target))
+  
+  # TODO: TAC limits, not on 1st year(s)
+
+  # CONTROL
+  ctrl <- fwdControl(
+    # TARGET for frq years
+    c(lapply(seq(ay + man_lag, ay + frq), function(x)
+      list(quant="catch", value=c(tac), year=x)))
+  )
+
+	return(list(ctrl=ctrl, tracking=tracking))
+}

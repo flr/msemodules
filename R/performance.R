@@ -293,7 +293,7 @@ extractPerformance <- function(dat, mp) {
 }
 # }}}
 
-# getPerformance
+# getPerformance {{{
 
 getOMPerformance <- function(path, pattern="*.rds", fy, ...) {
   return(rbindlist(lapply(list.files(path, pattern, full.names=TRUE), function(i)
@@ -311,3 +311,4 @@ getMSEPerformance <- function(path, pattern="*.rds") {
     }
   ), fill=TRUE))
 }
+# }}}

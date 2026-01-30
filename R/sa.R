@@ -9,7 +9,7 @@
 
 # shortcut.sa {{{
 
-shortcut.sa <- function(stk, idx, metric="ssb", SSBdevs=ind %=% 1, devs=SSBdevs,
+shortcut.sa <- function(stk, idx, metric="ssb", SSBdevs=met %=% 1, devs=SSBdevs,
   args, tracking, ...) {
 
   # DIMS
@@ -19,7 +19,7 @@ shortcut.sa <- function(stk, idx, metric="ssb", SSBdevs=ind %=% 1, devs=SSBdevs,
   stk <- window(stk, end=dy)
 
   # COMPUTE 'metric'
-  met <- do.call(metric, c(list(stk), list(...)))
+  met <- unitSums(do.call(metric, c(list(stk), list(...))))
 
   # CREATE ind from metric and deviances
   ind <- FLQuants(met * window(devs, start=y0, end=dy))
