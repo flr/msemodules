@@ -19,7 +19,7 @@ medmad <- function(x) paste0(format(median(x), digits=3), " (",
 #'
 #' The `inspect` function is designed to extract and format the tracking data from an `FLmse` object, performing aggregations and subsetting based on specified metrics and a summary function.
 #'
-#' @param tab An `FLmse` object or a `data.table` containing tracking data. If an `FLmse` object is supplied, the `tracking` slot is extracted.
+#' @param tab An `FLms+e` object or a `data.table` containing tracking data. If an `FLmse` object is supplied, the `tracking` slot is extracted.
 #' @param metrics A character vector specifying the metrics to include in the output. If a single character value is given and it does not match excatly any of the contained metrics, it is used to subset using the datatable::%ilike% function. The special value `"decisions"` can be used to select all metrics from `"hcr"` onward. If `NULL`, the default, all metrics are returned.
 #' @param summary A function (such as `mean` or `median`) to summarize the `data` column within the tracking `data.table` across rthe `iter` dimension. Defaults to `medmad` which returns a string with  `"Median (Median Absolute Deviation)"`.
 #'
@@ -63,8 +63,10 @@ inspect <- function(tab, metrics=NULL, summary=medmad) {
   ord <- c("om", "obs", "est", "ind", "phcr", "hcr", "isys", "tm", "iem", "fb", "fwd")
 
   # SUBSET and REORDER existing
-  metord <- unique(c("year", unlist(lapply(ord, function(x)
-    allmetrics[allmetrics %like% x]))))
+  mets <- lapply(ord, function(x) allmetrics[allmetrics %like% x])
+
+  metord <- unique(c("year", unlist(lapply(mets, function(x)
+    c(x[!x %in% ord], x[x %in% ord])))))
 
   # SUBSET by metrics
   if(!is.null(metrics)) {
@@ -79,12 +81,9 @@ inspect <- function(tab, metrics=NULL, summary=medmad) {
     }
   }
 
-  # SET columns to return
-  cols <- c("year", metord)
-
   # RESHAPE and REORDER
   res <- dcast(tab[metric %in% metord, .(data=summary(data)), by=.(year, metric)],
-    year ~ metric, value.var='data')[, ..cols]
+    year ~ metric, value.var='data')[, ..metord]
 
   return(res)
 }
