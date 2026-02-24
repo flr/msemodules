@@ -2,7 +2,7 @@
 % Please edit documentation in R/isys.R
 \name{effort.is}
 \alias{effort.is}
-\title{Implementation system module to set fishing mortalities relative to a (dynamic)  reference value}
+\title{Calculate Effort Multiplier for Harvest Control Rules}
 \usage{
 effort.is(
   stk,
@@ -14,20 +14,42 @@ effort.is(
 )
 }
 \arguments{
-\item{stk}{The observed or estimated FLStock.}
+\item{stk}{An FLStock object containing stock information}
 
 \item{ctrl}{A fwdControl object setting an F or effort target.}
 
-\item{Fref}{Reference value over which the multiplier is computed. Defaults to an average over the last observed nyears}
+\item{Fref}{Numeric or FLQuant. Reference fishing mortality for scaling. Defaults to
+the mean of fbar over the specified years.}
 
-\item{nyears}{Number of years to use to compute reference value. strating on last data year (ay - data_lag).}
+\item{nyears}{Integer. Number of years to use for calculating mean Fref.
+Default is taken from \code{args$nsqy}}
 
 \item{args}{A list containing dimensionality arguments, passed on by mp().}
 
 \item{tracking}{An FLQuant used for tracking indicators, intermediate values, and decisions during MP evaluation.}
 }
+\value{
+A list containing:
+\describe{
+\item{ctrl}{Updated control list with effort multiplier in \code{value}
+and adjusted years in \code{rel.year}}
+\item{tracking}{Updated tracking object}
+}
+}
 \description{
-Implementation system module to set fishing mortalities relative to a (dynamic)  reference value
+Converts a harvest control rule (HCR) fihsing mortality target into a multiplier
+relative to a (dynamic) reference fishing mortality level.
+}
+\details{
+The function calculates the effort multiplier as:
+\deqn{mult = \frac{target}{F_{ref}}}{mult = target / Fref}
+
+This multiplier is then stored in the control object with years
+adjusted backwards by \code{data_lag} to account for assessment lag.
+}
+\note{
+The \code{ctrl$quant} parameter must be one of "f", "fbar", or "effort".
+Other values will cause the function to stop with an error.
 }
 \examples{
 # Example dataset
@@ -48,4 +70,7 @@ run_nois <- mp(om, control=ctrl[-3], args=list(iy=2021, fy=2035))
 
 # Plots results
 plot(om, effort.is=run, no_is=run2)
+}
+\seealso{
+\code{\link{fbar}} for calculating mean fishing mortality,
 }
