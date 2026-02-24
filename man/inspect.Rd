@@ -7,7 +7,7 @@
 inspect(tab, metrics = NULL, summary = medmad)
 }
 \arguments{
-\item{tab}{An \code{FLmse} object or a \code{data.table} containing tracking data. If an \code{FLmse} object is supplied, the \code{tracking} slot is extracted.}
+\item{tab}{An \code{FLms+e} object or a \code{data.table} containing tracking data. If an \code{FLmse} object is supplied, the \code{tracking} slot is extracted.}
 
 \item{metrics}{A character vector specifying the metrics to include in the output. If a single character value is given and it does not match excatly any of the contained metrics, it is used to subset using the datatable::\%ilike\% function. The special value \code{"decisions"} can be used to select all metrics from \code{"hcr"} onward. If \code{NULL}, the default, all metrics are returned.}
 
@@ -17,10 +17,21 @@ inspect(tab, metrics = NULL, summary = medmad)
 A \code{data.table} where rows correspond to years and columns to selected metrics, with the tracking \code{data} aggregated using the specified summary function.
 }
 \description{
-The \code{inspect} function is designed to extract and format the tracking data from an \code{FLmse} object, performing aggregations and subsetting based on specified metrics and a summary function.
+The \code{inspect} function turns the long \code{tracking} table into a year a metric summary
+on which to track the inoputs and outputs of all steps inside a call to the \code{mp}
+function.
 }
 \details{
+The function processes the table on the \code{tracking} slot by:
+\itemize{
+\item Arranging metrics based on the order in which they are produced inside \code{mp()}.
+\item Subsets metrics based on user input or predefined criteria like \code{"decisions"}.
+\item Aggregates the \code{data} column using the \code{summary} function provided.
+\item Reshapes the processed \code{data.table} into a year-by-metrics format for easy reading.
+}
 
+The predefined metric order is that of the various steps inside \code{mp()}: \code{"om"}, \code{"obs"}, \code{"est"}, \code{"ind"}, \code{"phcr"}, \code{"hcr"}, \code{"isys"}, \code{"tm"}, \code{"iem"}, \code{"fb"}, \code{"fwd"}. Extra tracks produced inside any module are placed before the one named after
+the module that produced it.
 }
 \examples{
 # Load example MP run

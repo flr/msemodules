@@ -121,3 +121,85 @@ bank_borrow.is <- function(stk, ctrl, args, split=NULL, rate = NULL, diff = 0.15
   return(list(ctrl = ctrl, tracking = tracking))
 }
 # }}}
+
+# effort.is {{{
+
+#' Calculate Effort Multiplier for Harvest Control Rules
+#'
+#' Converts a harvest control rule (HCR) fihsing mortality target into a multiplier
+#' relative to a (dynamic) reference fishing mortality level.
+#'
+#' @param stk An FLStock object containing stock information
+#' @param ctrl A fwdControl object setting an F or effort target.
+#' @param Fref Numeric or FLQuant. Reference fishing mortality for scaling. Defaults to
+#'   the mean of fbar over the specified years.
+#' @param nyears Integer. Number of years to use for calculating mean Fref.
+#'   Default is taken from `args$nsqy`
+#' @param args A list containing dimensionality arguments, passed on by mp().
+#' @param tracking An FLQuant used for tracking indicators, intermediate values, and decisions during MP evaluation.
+#'
+#' @return A list containing:
+#'   \describe{
+#'     \item{ctrl}{Updated control list with effort multiplier in `value` 
+#'       and adjusted years in `rel.year`}
+#'     \item{tracking}{Updated tracking object}
+#'   }
+#'
+#' @details
+#' The function calculates the effort multiplier as:
+#' \deqn{mult = \frac{target}{F_{ref}}}{mult = target / Fref}
+#'
+#' This multiplier is then stored in the control object with years
+#' adjusted backwards by `data_lag` to account for assessment lag.
+#'
+#' @note
+#' The `ctrl$quant` parameter must be one of "f", "fbar", or "effort".
+#' Other values will cause the function to stop with an error.
+#'
+#' @seealso
+#'   \code{\link{fbar}} for calculating mean fishing mortality,
+#' @examples
+#' # Example dataset
+#' data(plesim)
+#' 
+#' # Sets up an mpCtrl using hockeystick(fbar~ssb)
+#' ctrl <- mpCtrl(
+#'   est = mseCtrl(method=perfect.sa),
+#'   hcr = mseCtrl(method=hockeystick.hcr, args=list(metric="ssb", trigger=45000, 
+#'     output="fbar", target=0.27)),
+#'   isys = mseCtrl(method=effort.is, args=list(nyears=3)))
+#' 
+#' # Runs mp between 2021 and 2035
+#' run <- mp(om, control=ctrl, args=list(iy=2021, fy=2035))
+#' 
+#' # Runs mp without effort.is 'nyears' buffer effect
+#' run_nois <- mp(om, control=ctrl[-3], args=list(iy=2021, fy=2035))
+#' 
+#' # Plots results
+#' plot(om, effort.is=run, no_is=run2)
+
+effort.is <- function(stk, ctrl, Fref=yearMeans(fbar(stk)[, ac(seq(dy - nyears, dy))]), 
+  nyears=args$nsqy, args, tracking) {
+
+  # CHECK ctrl sets F or effort
+  if(!ctrl$quant %in% c("fbar", "f", "effort"))
+    stop("'effort.is' can only accept ctrl set on 'f', 'fbar' or 'effort'")
+
+  # EXTRACT args
+  spread(args)
+
+	# target to reach defined by HCR
+	trgt <- ctrl$value
+  
+  # multiplier
+	mult <- trgt / c(Fref)
+	
+  # new control file, in relative terms
+  ctrl$value <- mult
+  ctrl$rel.year <- ctrl$year - data_lag
+
+  # TODO: TEST and SET for relative ctrl$fishery, biol, catch
+
+  return(list(ctrl = ctrl, tracking = tracking))
+
+} # }}}

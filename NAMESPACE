@@ -27,6 +27,7 @@ export(
   "bank_borrow.is",
   "buffer.hcr",
   "depletion.hcr",
+  "effort.is",
   "extractPerformance",
   "getMSEPerformance",
   "getOMPerformance",

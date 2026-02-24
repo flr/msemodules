@@ -17,22 +17,22 @@ medmad <- function(x) paste0(format(median(x), digits=3), " (",
 
 #' Inspect MSE Tracking Data
 #'
-#' The `inspect` function is designed to extract and format the tracking data from an `FLmse` object, performing aggregations and subsetting based on specified metrics and a summary function.
+#' The `inspect` function turns the long `tracking` table into a year a metric summary
+#' on which to track the inoputs and outputs of all steps inside a call to the `mp`
+#' function.
 #'
 #' @param tab An `FLms+e` object or a `data.table` containing tracking data. If an `FLmse` object is supplied, the `tracking` slot is extracted.
 #' @param metrics A character vector specifying the metrics to include in the output. If a single character value is given and it does not match excatly any of the contained metrics, it is used to subset using the datatable::%ilike% function. The special value `"decisions"` can be used to select all metrics from `"hcr"` onward. If `NULL`, the default, all metrics are returned.
 #' @param summary A function (such as `mean` or `median`) to summarize the `data` column within the tracking `data.table` across rthe `iter` dimension. Defaults to `medmad` which returns a string with  `"Median (Median Absolute Deviation)"`.
-#'
 #' @details
-#' The function processes tracking data in the following ways:
-#'   - Extracts the tracking data from an `FLmse` object.
-#'   - Arranges metrics based on the order in which they are produced inside `mp()`.
+#' The function processes the table on the `tracking` slot by:
+#'   - Arranging metrics based on the order in which they are produced inside `mp()`.
 #'   - Subsets metrics based on user input or predefined criteria like `"decisions"`.
 #'   - Aggregates the `data` column using the `summary` function provided.
 #'   - Reshapes the processed `data.table` into a year-by-metrics format for easy reading.
-#' }
 #'
-#' The predefined metric order is that of the various steps inside `mp()`: `"om"`, `"obs"`, `"est"`, `"ind"`, `"phcr"`, `"hcr"`, `"isys"`, `"tm"`, `"iem"`, `"fb"`, `"fwd"`. Extra tracks produced inside any module are placed following the one named after the module that produced it.
+#' The predefined metric order is that of the various steps inside `mp()`: `"om"`, `"obs"`, `"est"`, `"ind"`, `"phcr"`, `"hcr"`, `"isys"`, `"tm"`, `"iem"`, `"fb"`, `"fwd"`. Extra tracks produced inside any module are placed before the one named after
+#' the module that produced it.
 #'
 #' @return A `data.table` where rows correspond to years and columns to selected metrics, with the tracking `data` aggregated using the specified summary function.
 #'
