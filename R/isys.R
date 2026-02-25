@@ -176,7 +176,7 @@ bank_borrow.is <- function(stk, ctrl, args, split=NULL, rate = NULL, diff = 0.15
 #' run_nois <- mp(om, control=ctrl[-3], args=list(iy=2021, fy=2035))
 #' 
 #' # Plots results
-#' plot(om, effort.is=run, no_is=run2)
+#' plot(om, effort.is=run, no_is=run_nois)
 
 effort.is <- function(stk, ctrl, Fref=yearMeans(fbar(stk)[, ac(seq(dy - nyears, dy))]), 
   nyears=args$nsqy, args, tracking) {

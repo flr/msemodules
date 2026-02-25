@@ -69,7 +69,7 @@ run <- mp(om, control=ctrl, args=list(iy=2021, fy=2035))
 run_nois <- mp(om, control=ctrl[-3], args=list(iy=2021, fy=2035))
 
 # Plots results
-plot(om, effort.is=run, no_is=run2)
+plot(om, effort.is=run, no_is=run_nois)
 }
 \seealso{
 \code{\link{fbar}} for calculating mean fishing mortality,
