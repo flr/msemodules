@@ -22,5 +22,4 @@ ctrl <- mpCtrl(est = mseCtrl(method=shortcut.sa,
 # Runs the MP
 run <- mp(om, control=ctrl, args=list(iy=2021, fy=2035, frq=1))
 
-save(run,  file="../data/mserun.rda")
-
+save(run,  file="../data/mserun.rda", compress="xz")
