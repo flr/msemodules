@@ -7,8 +7,8 @@
 effort.is(
   stk,
   ctrl,
-  Fref = yearMeans(fbar(stk)[, ac(seq(dy - nyears, dy))]),
   nyears = args$nsqy,
+  Fref = yearMeans(fbar(stk)[, ac(seq(dy - nyears + 1, dy))]),
   args,
   tracking
 )
@@ -18,11 +18,11 @@ effort.is(
 
 \item{ctrl}{A fwdControl object setting an F or effort target.}
 
-\item{Fref}{Numeric or FLQuant. Reference fishing mortality for scaling. Defaults to
-the mean of fbar over the specified years.}
-
 \item{nyears}{Integer. Number of years to use for calculating mean Fref.
 Default is taken from \code{args$nsqy}}
+
+\item{Fref}{Numeric or FLQuant. Reference fishing mortality for scaling. Defaults to
+the mean of fbar over the specified years.}
 
 \item{args}{A list containing dimensionality arguments, passed on by mp().}
 
