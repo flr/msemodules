@@ -352,6 +352,7 @@ getMSEPerformance <- function(path, pattern="*.rds") {
 #'     data = runif(4, 1000, 3000),
 #'     mp = "MP1"
 #'   )
+#'   quant <- performanceFLQuant(perf_dt)
 #'   quants <- performanceFLQuants(perf_dt)
 #' }
 #'
@@ -359,7 +360,20 @@ getMSEPerformance <- function(path, pattern="*.rds") {
 #'
 #' @keywords manip
 
-performanceFLQuant <- performanceFLQuants <- function(x) {
+performanceFLQuant <- function(x) {
+  
+  res <- performanceFLQuants(x)
+
+  if(is.list(res) && length(res) == 1) {
+    return(res[[1]])
+  } else {
+    return(res)
+  }
+}
+
+#' @rdname performanceFLQuant
+
+performanceFLQuants <- function(x) {
 
   # USE poor mans' dispatch
   if(is(x, "FLmse") | is(x, "FLmses")) {
@@ -390,10 +404,5 @@ performanceFLQuant <- performanceFLQuants <- function(x) {
     )
   }
 
-  # DROP if only one mp
-  if(length(res) == 1) {
-    return(res[[1]])
-  } else {
-    return(res)
-  }
+  return(res)
 }

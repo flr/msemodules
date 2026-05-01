@@ -2,9 +2,12 @@
 % Please edit documentation in R/performance.R
 \name{performanceFLQuant}
 \alias{performanceFLQuant}
+\alias{performanceFLQuants}
 \title{Convert Performance Data to FLQuant Format}
 \usage{
 performanceFLQuant(x)
+
+performanceFLQuants(x)
 }
 \arguments{
 \item{x}{An object of class \code{FLmse}, \code{FLmses}, or a \code{data.table}.}
@@ -42,6 +45,7 @@ When results from multiple management procedures are present, the output is an
     data = runif(4, 1000, 3000),
     mp = "MP1"
   )
+  quant <- performanceFLQuant(perf_dt)
   quants <- performanceFLQuants(perf_dt)
 }
 
