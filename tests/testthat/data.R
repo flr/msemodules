@@ -13,18 +13,19 @@ library(mse)
 data(plesim)
 
 # Set control: sa and hcr
-control <- m
-library(mse)pCtrl(list(
+control <- mpCtrl(list(
   est = mseCtrl(method=perfect.sa),
   hcr = mseCtrl(method=hockeystick.hcr, args=list(lim=0,
   trigger=14000, target=0.18))))
 
 # RUN mp
-te <- mps(om, oem=oem, ctrl=control, args=list(iy=2021, fy=2034))
+te <- mp(om, oem=oem, ctrl=control, args=list(iy=2021, fy=2034))
 
 # RUN mps
 tes <- mps(om, oem=oem, ctrl=control, args=list(iy=2021, fy=2034),
   hcr=list(target=c(0.18, 0.25, 0.25)))
+
+performance(tes) <- performance(tes, statistic=statistics)
 
 save(te, tes, file="mse.rda", compress="xz")
 

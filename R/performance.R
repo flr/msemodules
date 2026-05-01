@@ -359,7 +359,7 @@ getMSEPerformance <- function(path, pattern="*.rds") {
 #'
 #' @keywords manip
 
-performanceFLQuants <- function(x) {
+performanceFLQuant <- performanceFLQuants <- function(x) {
 
   # USE poor mans' dispatch
   if(is(x, "FLmse") | is(x, "FLmses")) {
