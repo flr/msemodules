@@ -6,6 +6,7 @@
 #
 # Distributed under the terms of the EUPL-1.2
 
+# CRUD: write, read, update, delete
 
 # writePerformance {{{
 
@@ -312,3 +313,87 @@ getMSEPerformance <- function(path, pattern="*.rds") {
   ), fill=TRUE))
 }
 # }}}
+
+# performanceFLQuants {{{
+
+#' Convert Performance Data to FLQuant Format
+#'
+#' Transforms performance metrics from `FLmse` or `FLmsea` objects, stored as a
+#' data.table into an `FLQuant` pr `FLQuants` object.
+#'
+#' @param x An object of class `FLmse`, `FLmses`, or a `data.table`.
+#'
+#' @return
+#'   If a single management procedure (mp) is present, returns a single `FLQuant`
+#'   object. If multiple management procedures are present, returns a list of
+#'   `FLQuant` objects, one per mp. When `biol` column is present, it is renamed
+#'   to `unit` in the resulting `FLQuant` or `FLQuants`.
+#'
+#' @details
+#'   If `x` is of class `FLmse` or `FLmses`, the performance slot is extracted
+#'   automatically. The data.table must contain columns: `statistic`, `year`, `iter`,
+#'   `data`, and `mp`. Optionally, a `biol` column can be present, as in the
+#'   performance table obtained from callin `mp()` on an `FLombf` OM. Values for each 
+#'   `biol` will be separated using the 'unit' dimension.
+#'
+#'   The first (`quant`) dimension of the `FLQuant` or `FLQuants` contain the
+#'    statistics, named as in the `statistic` column of the performance table.
+#'    
+#'    When results from multiple management procedures are present, the output is an
+#'   `FLQuants` list of `FLQuant` objects, one per mp.
+#'
+#' @examples
+#' \dontrun{
+#'   # Using a data.table directly
+#'   perf_dt <- data.table(
+#'     statistic = rep("SSB", 4),
+#'     year = rep(2025:2026, 2),
+#'     iter = rep(1:2, each = 2),
+#'     data = runif(4, 1000, 3000),
+#'     mp = "MP1"
+#'   )
+#'   quants <- performanceFLQuants(perf_dt)
+#' }
+#'
+#' @seealso [performance()], [FLmse-class], [FLmses-class]
+#'
+#' @keywords manip
+
+performanceFLQuants <- function(x) {
+
+  # USE poor mans' dispatch
+  if(is(x, "FLmse") | is(x, "FLmses")) {
+    x <- performance(x)
+  }
+
+  # CHECK x is data.table with correct columns
+  if(!is(x, "data.table") | !all(c("statistic", "year", "iter", "data", "mp") %in%
+    colnames(x)))
+    stop("x must be a data.table with columns: statistic, year, iter, data, mp")
+  
+  # CHECK no. of biols
+  if("biol" %in% colnames(x)) {
+    setnames(x, "biol", "unit")
+   
+    # BUILD FLQuant per mp, biol as unit
+    res <- lapply(split(x[, .(statistic, year, unit, iter, data, mp)], by="mp"),
+      function(x) {
+        as.FLQuant(x[, .(statistic, year, unit, iter, data)])
+      }
+    )
+  } else {
+    # BUILD FLQuant per mp
+    res <- lapply(split(x[, .(statistic, year, iter, data, mp)], by="mp"),
+      function(x) {
+        as.FLQuant(x[, .(statistic, year, iter, data)])
+      }
+    )
+  }
+
+  # DROP if only one mp
+  if(length(res) == 1) {
+    return(res[[1]])
+  } else {
+    return(res)
+  }
+}
