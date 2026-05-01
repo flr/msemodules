@@ -7,7 +7,7 @@
 # Distributed under the terms of the EUPL-1.2
 
 
-library(msetools)
+library(msemodules)
 
 data(sol274)
 
