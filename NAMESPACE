@@ -44,5 +44,7 @@ export(
   "shortcut.sa",
   "shortcut_devs",
   "summaryPerformance",
+  "trackingFLQuant",
+  "trackingFLQuants",
   "writePerformance"
   )

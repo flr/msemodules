@@ -9,19 +9,17 @@
 
 load('mse.rda')
 
-# --- performanceFLQuant() {{{
+# --- trackingFLQuant() {{{
 
-tab <- performance(te)
-res <- performanceFLQuant(te)
-
-performanceFLQuant(tab[iter == 1,])
+tab <- tracking(te)
+res <- trackingFLQuant(te)
 
 # CLASS
 expect_true(is(res, "FLQuant"))
 
 # DIM
-tab[, .(statistic, year, iter, mp)]
-dtab <- unname(unlist(tab[, lapply(.SD, uniqueN)])[c("statistic", "year", "iter")])
+tab[, .(metric, year, iter)]
+dtab <- unname(unlist(tab[, lapply(.SD, uniqueN)])[c("metric", "year", "iter")])
 
 expect_equal(dim(res)[c(1,2,6)], dtab)
 

@@ -8,7 +8,7 @@
 
 library(mse)
 
-# BUILD example FLmse and FLmses
+# BUILD example FLmse and FLmses from FLom
 
 data(plesim)
 
@@ -28,4 +28,6 @@ tes <- mps(om, oem=oem, ctrl=control, args=list(iy=2021, fy=2034),
 performance(tes) <- performance(tes, statistic=statistics)
 
 save(te, tes, file="mse.rda", compress="xz")
+
+# FLombf
 

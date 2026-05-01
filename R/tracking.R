@@ -89,3 +89,90 @@ inspect <- function(tab, metrics=NULL, summary=medmad) {
 }
 
 # }}}
+
+# trackingFLQuants {{{
+
+#' Convert Performance Data to FLQuant Format
+#'
+#' Transforms performance metrics from `FLmse` or `FLmsea` objects, stored as a
+#' data.table into an `FLQuant` pr `FLQuants` object.
+#'
+#' @param x An object of class `FLmse`, `FLmses`, or a `data.table`.
+#'
+#' @return
+#'   If a single management procedure (mp) is present, returns a single `FLQuant`
+#'   object. If multiple management procedures are present, returns a list of
+#'   `FLQuant` objects, one per mp. When `biol` column is present, it is renamed
+#'   to `unit` in the resulting `FLQuant` or `FLQuants`.
+#'
+#' @details
+#'   If `x` is of class `FLmse` or `FLmses`, the performance slot is extracted
+#'   automatically. The data.table must contain columns: `statistic`, `year`, `iter`,
+#'   `data`, and `mp`. Optionally, a `biol` column can be present, as in the
+#'   performance table obtained from callin `mp()` on an `FLombf` OM. Values for each 
+#'   `biol` will be separated using the 'unit' dimension.
+#'
+#'   The first (`quant`) dimension of the `FLQuant` or `FLQuants` contain the
+#'    statistics, named as in the `statistic` column of the performance table.
+#'    
+#'    When results from multiple management procedures are present, the output is an
+#'   `FLQuants` list of `FLQuant` objects, one per mp.
+#'
+#' @examples
+#' \dontrun{
+#'   # Using a data.table directly
+#'   perf_dt <- data.table(
+#'     statistic = rep("SSB", 4),
+#'     year = rep(2025:2026, 2),
+#'     iter = rep(1:2, each = 2),
+#'     data = runif(4, 1000, 3000),
+#'     mp = "MP1"
+#'   )
+#'   quant <- trackingFLQuant(perf_dt)
+#'   quants <- trackingFLQuants(perf_dt)
+#' }
+#'
+#' @seealso [performance()], [FLmse-class], [FLmses-class]
+#'
+#' @keywords manip
+
+trackingFLQuant <- function(x) {
+  return(trackingFLQuants(x))
+}
+
+#' @rdname trackingFLQuant
+
+trackingFLQuants <- function(x) {
+
+  # USE poor mans' dispatch
+  if(is(x, "FLmse")) {
+    res <- .coercetrackingFLQuant(copy(tracking(x)))
+  } else if(is(x, "FLmses")) {
+    res <- FLQuants(lapply(x, function(x)
+      .coercetrackingFLQuant(copy(tracking(x)))))
+ } else if(is(x, "data.table")) {
+    res <- .coercetrackingFLQuant(copy(x))
+  } else {
+    stop("x must be an FLmse, FLmses, or data.table")
+  }
+  return(res)
+}
+
+.coercetrackingFLQuant <- function(x) {
+  
+  # CHECK x is data.table with correct columns
+  if(!is(x, "data.table") | !all(c("metric", "year", "iter", "data") %in%
+    colnames(x)))
+    stop("x must be a data.table with columns: (biol), metric, year, iter, data")
+
+  # SET biol to unique if not present
+  x[, biol:=ifelse(biol == "", "unique", biol)] 
+
+  # CHANGE biol colname to unit
+  setnames(x, "biol", "unit")
+
+  # COERCE to FLQuant
+  res <- as.FLQuant(x[, .(metric, year, iter, data)])
+
+  return(res)
+}
