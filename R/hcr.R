@@ -405,7 +405,7 @@ pid.hcr <- function(stk, ind, ref, metric=ssb, initial, kp=0, ki=0, kd=0,
 
 # }}}
 
-# cpue.hcr
+# cpue.hcr {{{
 
 cpue.hcr <- function(stk, ind, k1=0.2, k2=0.2, k3=0.2, k4=0.2, target=1,
   dtaclow=0.85, dtacupp=1.15, initac=NULL, slope="slope", mean="mean",
@@ -447,4 +447,4 @@ cpue.hcr <- function(stk, ind, k1=0.2, k2=0.2, k3=0.2, k4=0.2, target=1,
   )
 
 	return(list(ctrl=ctrl, tracking=tracking))
-}
+} # }}}
