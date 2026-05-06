@@ -25,6 +25,7 @@ importFrom("ggplot2",
 
 export(
   "bank_borrow.is",
+  "buffer_bands",
   "buffer.hcr",
   "depletion.hcr",
   "effort.is",
