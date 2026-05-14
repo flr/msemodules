@@ -25,6 +25,7 @@ importFrom("ggplot2",
 
 export(
   "bank_borrow.is",
+  "buffer_bands",
   "buffer.hcr",
   "depletion.hcr",
   "effort.is",
@@ -34,6 +35,8 @@ export(
   "inspect",
   "labelPerformance",
   "medmad",
+  "performanceFLQuant",
+  "performanceFLQuants",
   "periodsPerformance",
   "pid.hcr",
   "plot_buffer.hcr",
@@ -42,5 +45,7 @@ export(
   "shortcut.sa",
   "shortcut_devs",
   "summaryPerformance",
+  "trackingFLQuant",
+  "trackingFLQuants",
   "writePerformance"
   )

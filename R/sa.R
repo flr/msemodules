@@ -13,7 +13,7 @@ shortcut.sa <- function(stk, idx, metric="ssb", SSBdevs=met %=% 1, devs=SSBdevs,
   args, tracking, ...) {
 
   # DIMS
-  spread(args, names=c('y0', 'dy', 'ay'))
+  spread(args)
 
   # SUBSET oem stock
   stk <- window(stk, end=dy)
@@ -28,7 +28,7 @@ shortcut.sa <- function(stk, idx, metric="ssb", SSBdevs=met %=% 1, devs=SSBdevs,
   names(ind) <- metric
 
   # TRACK 'convergence'
-  track(tracking, "conv.est", ay) <- 1
+  track(tracking, "conv.est", year=ay, biol=stock) <- 1
  
   list(stk=stk, ind=ind, tracking=tracking)
 }

@@ -77,8 +77,8 @@ bank_borrow.is <- function(stk, ctrl, args, split=NULL, rate = NULL, diff = 0.15
   if (ay == iy) {
 
     # START tracking
-    track(tracking, "borrowing.isys", ac(ay)) <- 0
-    track(tracking, "banking.isys", ac(ay)) <- 0
+    track(tracking, "borrowing.isys", year=ay) <- 0
+    track(tracking, "banking.isys", year=ay) <- 0
 
     # SET initial
     pre <- c(areaSums(unitSums(seasonSums(window(catch(stk),
@@ -86,6 +86,7 @@ bank_borrow.is <- function(stk, ctrl, args, split=NULL, rate = NULL, diff = 0.15
   
   } else {
 
+    # GET this year's HCR decision
     pre <- tracking[metric == 'hcr' & year == ay, data]
 
     # GET banked or borrowed amounts
@@ -178,8 +179,9 @@ bank_borrow.is <- function(stk, ctrl, args, split=NULL, rate = NULL, diff = 0.15
 #' # Plots results
 #' plot(om, effort.is=run, no_is=run_nois)
 
-effort.is <- function(stk, ctrl, Fref=yearMeans(fbar(stk)[, ac(seq(dy - nyears, dy))]), 
-  nyears=args$nsqy, args, tracking) {
+effort.is <- function(stk, ctrl, nyears=args$nsqy, 
+  Fref=yearMeans(fbar(stk)[, ac(seq(dy - nyears + 1, dy))]), 
+  args, tracking) {
 
   # CHECK ctrl sets F or effort
   if(!ctrl$quant %in% c("fbar", "f", "effort"))
@@ -193,13 +195,14 @@ effort.is <- function(stk, ctrl, Fref=yearMeans(fbar(stk)[, ac(seq(dy - nyears, 
   
   # multiplier
 	mult <- trgt / c(Fref)
-	
+
   # new control file, in relative terms
   ctrl$value <- mult
-  ctrl$rel.year <- ctrl$year - data_lag
+  ctrl$relYear <- ctrl$year - data_lag
 
   # TODO: TEST and SET for relative ctrl$fishery, biol, catch
 
   return(list(ctrl = ctrl, tracking = tracking))
 
-} # }}}
+}
+# }}}

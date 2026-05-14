@@ -135,7 +135,7 @@ buffer.hcr <- function(stk, ind, metric='wmean',
 #' @return ggplot2 object
 
 plot_buffer.hcr <- function(args, obs="missing", alpha=0.3,
-  labels=c(lim="limit", bufflow="Lower~buffer", buffupp="Upper~buffer",
+  labels=c(lim="Limit", bufflow="Lower~buffer", buffupp="Upper~buffer",
     metric=metric, output=output), metric=args$metric, output='multiplier',
     xlim=buffupp * 1.50, ylim=scale * 1.50) {
 
@@ -241,6 +241,38 @@ plot_buffer.hcr <- function(args, obs="missing", alpha=0.3,
 #   sloperatio=0.2)
 
 # plot_buffer.hcr(args, labels=list(metric='CPUE', output='C~mult'))
+
+# }}}
+
+# buffer_bands {{{
+
+#' @rdname buffer.hcr
+
+buffer_bands <- function(x) {
+
+  # ARGS
+  lim <- args(x)$lim
+  buffupp <- args(x)$buffupp
+  bufflow <- args(x)$bufflow
+  target <- buffupp * 1.5
+
+  tier_bands <- data.frame(
+    xmin  = c(0,       lim,     bufflow, buffupp),
+    xmax  = c(lim,     bufflow, buffupp, target),
+    label = c("Tier 1\n(critical)", "Tier 2\n(recovery)",
+            "Tier 3\n(buffer)",   "Tier 4\n(above target)"))
+
+  tier_colours <- c(
+    "Tier 1\n(critical)"      = "#A32D2D",
+    "Tier 2\n(recovery)"      = "#854F0B",
+    "Tier 3\n(buffer)"        = "#3B6D11",
+    "Tier 4\n(above target)"  = "#185FA5")
+
+  return(list(geom_rect(data = tier_bands,
+      aes(xmin = xmin, xmax = xmax, ymin = 0, ymax = Inf, fill = label),
+      inherit.aes = FALSE, alpha = 0.4),
+    scale_fill_manual(values = tier_colours, name = NULL)))
+}
 
 # }}}
 
@@ -405,7 +437,7 @@ pid.hcr <- function(stk, ind, ref, metric=ssb, initial, kp=0, ki=0, kd=0,
 
 # }}}
 
-# cpue.hcr
+# cpue.hcr {{{
 
 cpue.hcr <- function(stk, ind, k1=0.2, k2=0.2, k3=0.2, k4=0.2, target=1,
   dtaclow=0.85, dtacupp=1.15, initac=NULL, slope="slope", mean="mean",
@@ -447,4 +479,4 @@ cpue.hcr <- function(stk, ind, k1=0.2, k2=0.2, k3=0.2, k4=0.2, target=1,
   )
 
 	return(list(ctrl=ctrl, tracking=tracking))
-}
+} # }}}
