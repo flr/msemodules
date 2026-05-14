@@ -18,7 +18,7 @@ relative to a (dynamic) reference fishing mortality level."><meta property="og:i
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">msemodules</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.4</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.0</span>
       </span>
     </div>
 
@@ -58,8 +58,8 @@ relative to a (dynamic) reference fishing mortality level.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">effort.is</span><span class="op">(</span></span>
 <span>  <span class="va">stk</span>,</span>
 <span>  <span class="va">ctrl</span>,</span>
-<span>  Fref <span class="op">=</span> <span class="fu">yearMeans</span><span class="op">(</span><span class="fu">fbar</span><span class="op">(</span><span class="va">stk</span><span class="op">)</span><span class="op">[</span>, <span class="fu">ac</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="va">dy</span> <span class="op">-</span> <span class="va">nyears</span>, <span class="va">dy</span><span class="op">)</span><span class="op">)</span><span class="op">]</span><span class="op">)</span>,</span>
 <span>  nyears <span class="op">=</span> <span class="va">args</span><span class="op">$</span><span class="va">nsqy</span>,</span>
+<span>  Fref <span class="op">=</span> <span class="fu">yearMeans</span><span class="op">(</span><span class="fu">fbar</span><span class="op">(</span><span class="va">stk</span><span class="op">)</span><span class="op">[</span>, <span class="fu">ac</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="va">dy</span> <span class="op">-</span> <span class="va">nyears</span> <span class="op">+</span> <span class="fl">1</span>, <span class="va">dy</span><span class="op">)</span><span class="op">)</span><span class="op">]</span><span class="op">)</span>,</span>
 <span>  <span class="va">args</span>,</span>
 <span>  <span class="va">tracking</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -77,14 +77,14 @@ relative to a (dynamic) reference fishing mortality level.</p>
 <dd><p>A fwdControl object setting an F or effort target.</p></dd>
 
 
-<dt id="arg-fref">Fref<a class="anchor" aria-label="anchor" href="#arg-fref"></a></dt>
-<dd><p>Numeric or FLQuant. Reference fishing mortality for scaling. Defaults to
-the mean of fbar over the specified years.</p></dd>
-
-
 <dt id="arg-nyears">nyears<a class="anchor" aria-label="anchor" href="#arg-nyears"></a></dt>
 <dd><p>Integer. Number of years to use for calculating mean Fref.
 Default is taken from <code>args$nsqy</code></p></dd>
+
+
+<dt id="arg-fref">Fref<a class="anchor" aria-label="anchor" href="#arg-fref"></a></dt>
+<dd><p>Numeric or FLQuant. Reference fishing mortality for scaling. Defaults to
+the mean of fbar over the specified years.</p></dd>
 
 
 <dt id="arg-args">args<a class="anchor" aria-label="anchor" href="#arg-args"></a></dt>
@@ -109,18 +109,12 @@ and adjusted years in <code>rel.year</code></p></dd>
     <div id="details">
     <h2>Details</h2>
     <p>The function calculates the effort multiplier as:
-$$mult = \frac{target}{F_{ref}}$$</p>
-<p>This multiplier is then stored in the control object with years
-adjusted backwards by <code>data_lag</code> to account for assessment lag.</p>
+$$mult = \frac{target}{Fref}$$</p>
     </div>
     <div id="note">
     <h2>Note</h2>
     <p>The <code>ctrl$quant</code> parameter must be one of "f", "fbar", or "effort".
 Other values will cause the function to stop with an error.</p>
-    </div>
-    <div id="see-also">
-    <h2>See also</h2>
-    <div class="dont-index"><p><code>fbar</code> for calculating mean fishing mortality,</p></div>
     </div>
 
     <div id="ref-examples">

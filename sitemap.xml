@@ -8,11 +8,20 @@
 <url><loc>/reference/depletion.hcr.html</loc></url>
 <url><loc>/reference/effort.is.html</loc></url>
 <url><loc>/reference/extractPerformance.html</loc></url>
+<url><loc>/reference/getMSEPerformance.html</loc></url>
+<url><loc>/reference/getOMPerformance.html</loc></url>
 <url><loc>/reference/index.html</loc></url>
 <url><loc>/reference/inspect.html</loc></url>
 <url><loc>/reference/labelPerformance.html</loc></url>
 <url><loc>/reference/performance.html</loc></url>
+<url><loc>/reference/performanceFLQuant.html</loc></url>
+<url><loc>/reference/periodsPerformance.html</loc></url>
 <url><loc>/reference/pid.hcr.html</loc></url>
+<url><loc>/reference/readPerformance.html</loc></url>
+<url><loc>/reference/shortcut.sa.html</loc></url>
+<url><loc>/reference/shortcut_devs.html</loc></url>
+<url><loc>/reference/summaryPerformance.html</loc></url>
+<url><loc>/reference/trackingFLQuant.html</loc></url>
 <url><loc>/reference/writePerformance.html</loc></url>
 </urlset>
 
