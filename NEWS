@@ -1,3 +1,9 @@
+ NEWS for version 0.1.5
+
+ NEW FEATURES
+
+- buffer_bands plots coloured bands for each tier on top of plot_buffer.hcr
+
  NEWS for version 0.1.4
 
  BUG FIXES
