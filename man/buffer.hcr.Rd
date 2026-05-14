@@ -3,7 +3,8 @@
 \name{buffer.hcr}
 \alias{buffer.hcr}
 \alias{plot_buffer.hcr}
-\title{Buffer Harvest Control Rule (HCR)}
+\alias{buffer_bands}
+\title{Buffer-based harvest control rule}
 \usage{
 buffer.hcr(
   stk,
@@ -30,69 +31,204 @@ plot_buffer.hcr(
   args,
   obs = "missing",
   alpha = 0.3,
-  labels = c(lim = "limit", bufflow = "Lower~buffer", buffupp = "Upper~buffer", metric =
+  labels = c(lim = "Limit", bufflow = "Lower~buffer", buffupp = "Upper~buffer", metric =
     metric, output = output),
   metric = args$metric,
   output = "multiplier",
   xlim = buffupp * 1.5,
   ylim = scale * 1.5
 )
+
+buffer_bands(x)
 }
 \arguments{
-\item{stk}{The 'oem' observation or SA estimation, an FLStock object.}
+\item{stk}{A stock object, typically an \code{FLStock}, used together with \code{ind}
+to compute the HCR metric.}
 
-\item{ind}{Possible indicators returned by the 'est' step, FLQuants.}
+\item{ind}{An index object used when computing the selected metric.}
 
-\item{metric}{The metric name used for the x-axis label.}
+\item{metric}{Character string giving the metric used for the x-axis and,
+when \code{obs} is an \code{FLStock}, the variable extracted from \code{\link[FLCore:metrics]{FLCore::metrics()}}.}
 
-\item{target}{The desired target value for the metric, defaults to 1. Numeric or FLQuant.}
+\item{target}{Numeric. Target value of the metric.}
 
-\item{width}{Numeric. The width of the buffer zone surrounding the target. Default is \code{0.5}.}
+\item{width}{Numeric. Half-width of the buffer around \code{target}.}
 
-\item{lim}{Numeric. The lower threshold beyond which the HCR steeply reduces catch. Default is \code{max(target * 0.10, target - 2 * width)}.}
+\item{lim}{Numeric. Lower limit reference point for the metric.}
 
-\item{bufflow}{Numeric. The lower bound of the buffer range. Default is \code{max(lim * 1.50, target - width)}.}
+\item{bufflow}{Numeric. Lower bound of the buffer zone.}
 
-\item{buffupp}{Numeric. The upper bound of the buffer range. Default is \code{target + width}.}
+\item{buffupp}{Numeric. Upper bound of the buffer zone.}
 
-\item{sloperatio}{Numeric. Defines the slope for values exceeding the buffer's upper limit. Default is \code{0.15}.}
+\item{sloperatio}{Numeric. Controls the slope of output increases above
+\code{buffupp}.}
 
-\item{initial}{Numeric or \code{FLQuant}. The previous year's TAC value or another scaling factor for outputs.}
+\item{initial}{Initial output value used when no previous output is available.}
 
-\item{nyears}{Numeric. Number of years to use for windowing or smoothing metrics. Default is 4.}
+\item{nyears}{Number of recent years over which the metric is averaged.}
 
-\item{dupp}{A limit for the increase in the output variable, e.g. 1.15 for a maximum increase of 15\%, numeric. No limit is applied if NULL.}
+\item{dupp}{Optional upper bound on proportional increase in output.}
 
-\item{dlow}{A limit for the decrease in the output variable, e.g. 0.85 for a maximum decrease of 15\%, numeric. No limit is applied if NULL.}
+\item{dlow}{Optional lower bound on proportional decrease in output.}
 
-\item{all}{If \code{TRUE}, upper and lower limits (\code{dupp} and \code{dlow}) are applied unconditionally, otherwise only when metric > bufflow, logical.}
+\item{all}{Logical. If \code{TRUE}, change limits are always applied.}
 
-\item{...}{Any extra arguments to be passed to the function computing 'metric'.}
+\item{scale}{Logical. If \code{TRUE}, do not recover previous output from tracking.}
 
-\item{args}{list. The list of parameters used by the buffer.hcr function.}
+\item{...}{Additional arguments passed to \code{\link[mse:selectMetric]{mse::selectMetric()}}.}
 
-\item{tracking}{A data.table used for tracking indicators, intermediate values, and decisions during MP evaluation.}
+\item{args}{A list of arguments defining the buffer HCR. Typically includes
+values such as \code{lim}, \code{bufflow}, \code{buffupp}, \code{sloperatio}, and optionally
+other elements used by the plotting method. If an object of class
+\code{mseCtrl} is supplied to \code{\link[=plot_buffer.hcr]{plot_buffer.hcr()}}, its arguments are extracted
+using \code{\link[=args]{args()}}.}
 
-\item{obs}{Observed values to overlay on the plot.}
+\item{tracking}{A tracking object updated with metric, decision, tier, and
+output values.}
 
-\item{alpha}{Alpha transparency for observed points/lines.}
+\item{obs}{Optional observed values to overlay on the HCR plot. Can be:
+\itemize{
+\item an \code{FLStock} object, in which case \code{metric} and \code{output} are
+extracted and plotted;
+\item a numeric value, in which case a single point is added on the HCR
+curve;
+\item omitted, in which case no observations are added.
+}}
 
-\item{labels}{Labels for the plot annotations. A list with names among 'lim', 'bufflow', 'buffupp', 'metric', and 'output'.}
+\item{alpha}{Numeric. Alpha transparency used for observed points and paths.}
 
-\item{output}{The output name used for the y-axis label.}
+\item{labels}{Labels for plot annotations. A named vector or list with names
+among \code{lim}, \code{bufflow}, \code{buffupp}, \code{metric}, and \code{output}. Supplied values
+override the defaults.}
 
-\item{xlim}{The maximum x-axis limit for the plot.}
+\item{output}{Character string giving the output used for the y-axis and,
+when \code{obs} is an \code{FLStock}, the variable extracted from \code{\link[FLCore:metrics]{FLCore::metrics()}}.}
 
-\item{ylim}{The maximum y-axis limit for the plot.}
+\item{xlim}{Numeric. Maximum x-axis value for the HCR plot. By default set to
+\code{buffupp * 1.5}.}
+
+\item{ylim}{Numeric. Maximum y-axis value for the HCR plot.}
+
+\item{x}{An object for which \code{\link[=args]{args()}} returns a list containing at least the
+buffer-HCR parameters \code{lim}, \code{bufflow}, and \code{buffupp}.}
 }
 \value{
-ggplot2 object
+For \code{\link[=buffer.hcr]{buffer.hcr()}}, a list with components \code{ctrl} and \code{tracking}.
+
+For \code{\link[=buffer_bands]{buffer_bands()}}, a list of ggplot2 layers for shading HCR zones.
+
+For \code{\link[=plot_buffer.hcr]{plot_buffer.hcr()}}, a \code{ggplot2} object.
+
+For \code{\link[=buffer_bands]{buffer_bands()}}, a list of ggplot2 components:
+\itemize{
+\item a \code{\link[ggplot2:geom_tile]{ggplot2::geom_rect()}} layer that draws shaded tier bands;
+\item a \code{\link[ggplot2:scale_manual]{ggplot2::scale_fill_manual()}} layer that assigns colours to tiers.
+}
 }
 \description{
-Implements a "buffer" style harvest control rule (HCR) to set changes in catch levels by using a given metric, such as the value of an index of abundance, or an estimate of biomass. This is compared with some defined buffer and limit reference points, to compute a multiplier that will set future catches from previous levels.
-with optional bounds on TAC changes.
+Implements a buffer harvest control rule (HCR) that adjusts management output
+according to the recent value of a stock or index metric relative to a set of
+threshold reference points.
+
+Tools for visualizing a buffer-based harvest control rule (HCR), including
+the HCR curve itself and optional shaded management-tier bands.
 }
 \details{
-\code{plot_buffer.hcr} Plots the buffer harvest control rule (HCR) curve along with
-optional observed values.
+\code{\link[=buffer.hcr]{buffer.hcr()}} computes a piecewise decision multiplier from the selected
+metric and applies it to the previous output value.
+
+\code{\link[=buffer_bands]{buffer_bands()}} creates shaded ggplot2 rectangles marking the critical,
+recovery, buffer, and above-target zones implied by the same thresholds.
+
+\code{\link[=plot_buffer.hcr]{plot_buffer.hcr()}} draws the HCR curve implied by the buffer rule and can
+optionally overlay observed values.
+
+\code{\link[=buffer_bands]{buffer_bands()}} returns ggplot2 layers that shade the management tiers
+defined by the HCR thresholds.
+
+The buffer harvest control rule is defined by threshold values that partition
+the x-axis metric into zones:
+\itemize{
+\item below \code{lim}: critical zone;
+\item between \code{lim} and \code{bufflow}: recovery zone;
+\item between \code{bufflow} and \code{buffupp}: buffer zone;
+\item above \code{buffupp}: above-target zone.
 }
+
+\code{\link[=plot_buffer.hcr]{plot_buffer.hcr()}} evaluates the implied HCR multiplier across a sequence of
+metric values and draws the resulting curve, including annotations for the
+key thresholds.
+
+\code{\link[=buffer_bands]{buffer_bands()}} constructs semi-transparent shaded rectangles spanning these
+threshold intervals to support interpretation of HCR plots.
+}
+\section{plot_buffer.hcr}{
+
+\code{plot_buffer.hcr()} computes the HCR response curve from the supplied buffer
+rule parameters and returns a ggplot object. The plot includes:
+\itemize{
+\item the HCR line;
+\item vertical reference markers for \code{lim}, \code{bufflow}, and \code{buffupp};
+\item labels for the threshold points;
+\item optional observed points or trajectories.
+}
+
+If \code{obs} is an \code{FLStock} object, the function extracts the chosen \code{metric}
+and \code{output} values using \code{\link[FLCore:metrics]{FLCore::metrics()}} and overlays them on the HCR curve. If
+there is a single iteration, both points and a path are added, and first/last
+years are labelled.
+
+If \code{obs} is numeric, a single red point is placed at the corresponding
+location on the HCR curve.
+}
+
+\section{buffer_bands}{
+
+\code{buffer_bands()} extracts \code{lim}, \code{bufflow}, and \code{buffupp} from \code{args(x)} and
+defines four contiguous x-axis intervals. A fourth threshold,
+\code{target = 1.5 * buffupp}, is used as the upper bound for the final tier.
+
+The returned rectangles extend from \code{y = 0} to \code{y = Inf}, so they occupy the
+full vertical plotting range.
+}
+
+\section{Assumptions and caveats}{
+
+\itemize{
+\item Thresholds are assumed to satisfy
+\verb{0 <= lim <= bufflow <= buffupp}.
+\item \code{buffer_bands()} adds a fill scale and may therefore override an
+existing fill scale in a ggplot object.
+\item In \code{\link[=plot_buffer.hcr]{plot_buffer.hcr()}}, default values such as \code{xlim} and \code{ylim}
+depend on objects created after argument expansion and may rely on the
+surrounding evaluation framework.
+\item \code{plot_buffer.hcr()} currently uses internal helper functions such as
+\code{\link[FLCore:spread]{FLCore::spread()}}, \code{\link[=args]{args()}}, and \code{\link[FLCore:metrics]{FLCore::metrics()}}, and assumes these are available.
+}
+}
+
+\examples{
+\dontrun{
+args <- list(lim = 0.4, bufflow = 1, buffupp = 2, sloperatio = 0.2)
+
+# Plot the HCR curve
+plot_buffer.hcr(args, labels = list(metric = "CPUE", output = "C~mult"))
+
+# Add buffer bands to a custom ggplot
+layers <- buffer_bands(hcr)
+p <- ggplot(dat, aes(x = biomass, y = harvest)) + geom_line()
+for (ly in layers) p <- p + ly
+p
+}
+
+}
+\seealso{
+\code{\link[=plot_buffer.hcr]{plot_buffer.hcr()}}
+
+\code{\link[=args]{args()}}, \code{\link[FLCore:metrics]{FLCore::metrics()}}, \code{\link[ggplot2:geom_path]{ggplot2::geom_line()}},
+\code{\link[ggplot2:geom_tile]{ggplot2::geom_rect()}}, \code{\link[ggplot2:scale_manual]{ggplot2::scale_fill_manual()}}
+}
+\author{
+Iago Mosqueira, WMR; Richard Hillary, CSIRO
+}
+\keyword{hplot}

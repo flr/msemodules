@@ -10,32 +10,56 @@
 
 globalVariables(c(".", "ay", "bufflow", "buffupp", "data_lag", "data",
   "dy", "frq", "fy", "iy", "lim", "management_lag", "min", "mys",
-  "element", "label", "run", "statistic", "sloperatio", "year"))
+  "xmin", "xmax", "label", "element", "label", "run", "statistic",
+  "sloperatio", "year"))
 
 # buffer.hcr {{{
 
-#' Buffer Harvest Control Rule (HCR)
+#' Buffer-based harvest control rule
 #'
-#' Implements a "buffer" style harvest control rule (HCR) to set changes in catch levels by using a given metric, such as the value of an index of abundance, or an estimate of biomass. This is compared with some defined buffer and limit reference points, to compute a multiplier that will set future catches from previous levels.
-#' with optional bounds on TAC changes.
+#' Implements a buffer harvest control rule (HCR) that adjusts management output
+#' according to the recent value of a stock or index metric relative to a set of
+#' threshold reference points.
 #'
-#' @param stk The 'oem' observation or SA estimation, an FLStock object.
-#' @param ind Possible indicators returned by the 'est' step, FLQuants.
-#' @param metric Character or function. The metric applied by theb rule as input.Default is `wmean`, returned by `cpue.ind`.
-#' @param target The desired target value for the metric, defaults to 1. Numeric or FLQuant.
-#' @param width Numeric. The width of the buffer zone surrounding the target. Default is `0.5`.
-#' @param lim Numeric. The lower threshold beyond which the HCR steeply reduces catch. Default is `max(target * 0.10, target - 2 * width)`.
-#' @param bufflow Numeric. The lower bound of the buffer range. Default is `max(lim * 1.50, target - width)`.
-#' @param buffupp Numeric. The upper bound of the buffer range. Default is `target + width`.
-#' @param sloperatio Numeric. Defines the slope for values exceeding the buffer's upper limit. Default is `0.15`.
-#' @param initial Numeric or `FLQuant`. The previous year's TAC value or another scaling factor for outputs.
-#' @param nyears Numeric. Number of years to use for windowing or smoothing metrics. Default is 4.
-#' @param dlow A limit for the decrease in the output variable, e.g. 0.85 for a maximum decrease of 15%, numeric. No limit is applied if NULL.
-#' @param dupp A limit for the increase in the output variable, e.g. 1.15 for a maximum increase of 15%, numeric. No limit is applied if NULL.
-#' @param all If `TRUE`, upper and lower limits (`dupp` and `dlow`) are applied unconditionally, otherwise only when metric > bufflow, logical.
-#' @param ... Any extra arguments to be passed to the function computing 'metric'.
-#' @param args A list containing dimensionality arguments, passed on by mp().
-#' @param tracking A data.table used for tracking indicators, intermediate values, and decisions during MP evaluation.
+#' @param stk A stock object, typically an `FLStock`, used together with `ind`
+#'   to compute the HCR metric.
+#' @param ind An index object used when computing the selected metric.
+#' @param metric Character string specifying the metric to use in the HCR.
+#' @param target Numeric. Target value of the metric.
+#' @param width Numeric. Half-width of the buffer around `target`.
+#' @param lim Numeric. Lower limit reference point for the metric.
+#' @param bufflow Numeric. Lower bound of the buffer zone.
+#' @param buffupp Numeric. Upper bound of the buffer zone.
+#' @param sloperatio Numeric. Controls the slope of output increases above
+#'   `buffupp`.
+#' @param initial Initial output value used when no previous output is available.
+#' @param nyears Number of recent years over which the metric is averaged.
+#' @param dupp Optional upper bound on proportional increase in output.
+#' @param dlow Optional lower bound on proportional decrease in output.
+#' @param all Logical. If `TRUE`, change limits are always applied.
+#' @param scale Logical. If `TRUE`, do not recover previous output from tracking.
+#' @param ... Additional arguments passed to [selectMetric()].
+#' @param args A list of auxiliary arguments unpacked by [spread()].
+#' @param tracking A tracking object updated with metric, decision, tier, and
+#'   output values.
+#' @param x An object for which [args()] returns a list containing at least the
+#'   buffer HCR parameters `lim`, `bufflow`, and `buffupp`.
+#'
+#' @return
+#' For [buffer.hcr()], a list with components `ctrl` and `tracking`.
+#'
+#' For [buffer_bands()], a list of ggplot2 layers for shading HCR zones.
+#'
+#' @details
+#' [buffer.hcr()] computes a piecewise decision multiplier from the selected
+#' metric and applies it to the previous output value.
+#'
+#' [buffer_bands()] creates shaded ggplot2 rectangles marking the critical,
+#' recovery, buffer, and above-target zones implied by the same thresholds.
+#'
+#' @seealso [plot_buffer.hcr()]
+#' @name buffer.hcr
+#' @author Iago Mosqueira, WMR; Richard Hillary, CSIRO
 
 buffer.hcr <- function(stk, ind, metric='wmean',
   target=1, width=0.5, lim=max(target * 0.10, target - 2 * width), 
@@ -120,19 +144,129 @@ buffer.hcr <- function(stk, ind, metric='wmean',
 
 # plot_buffer.hcr {{{
 
-#' @rdname buffer.hcr
+#' Plot and annotate a buffer harvest control rule
+#'
+#' Tools for visualizing a buffer-based harvest control rule (HCR), including
+#' the HCR curve itself and optional shaded management-tier bands.
+#'
+#' [plot_buffer.hcr()] draws the HCR curve implied by the buffer rule and can
+#' optionally overlay observed values.
+#'
+#' [buffer_bands()] returns ggplot2 layers that shade the management tiers
+#' defined by the HCR thresholds.
+#'
+#' @param args A list of arguments defining the buffer HCR. Typically includes
+#'   values such as `lim`, `bufflow`, `buffupp`, `sloperatio`, and optionally
+#'   other elements used by the plotting method. If an object of class
+#'   `mseCtrl` is supplied to [plot_buffer.hcr()], its arguments are extracted
+#'   using [args()].
+#' @param obs Optional observed values to overlay on the HCR plot. Can be:
+#'   \itemize{
+#'     \item an `FLStock` object, in which case `metric` and `output` are
+#'       extracted and plotted;
+#'     \item a numeric value, in which case a single point is added on the HCR
+#'       curve;
+#'     \item omitted, in which case no observations are added.
+#'   }
+#' @param alpha Numeric. Alpha transparency used for observed points and paths.
+#' @param labels Labels for plot annotations. A named vector or list with names
+#'   among `lim`, `bufflow`, `buffupp`, `metric`, and `output`. Supplied values
+#'   override the defaults.
+#' @param metric Character string giving the metric used for the x-axis and,
+#'   when `obs` is an `FLStock`, the variable extracted from [metrics()].
+#' @param output Character string giving the output used for the y-axis and,
+#'   when `obs` is an `FLStock`, the variable extracted from [metrics()].
+#' @param xlim Numeric. Maximum x-axis value for the HCR plot. By default set to
+#'   `buffupp * 1.5`.
+#' @param ylim Numeric. Maximum y-axis value for the HCR plot.
+#' @param x An object for which [args()] returns a list containing at least the
+#'   buffer-HCR parameters `lim`, `bufflow`, and `buffupp`.
+#'
+#' @return
+#' For [plot_buffer.hcr()], a `ggplot2` object.
+#'
+#' For [buffer_bands()], a list of ggplot2 components:
+#' \itemize{
+#'   \item a [ggplot2::geom_rect()] layer that draws shaded tier bands;
+#'   \item a [ggplot2::scale_fill_manual()] layer that assigns colours to tiers.
+#' }
+#'
 #' @details
-#' `plot_buffer.hcr` Plots the buffer harvest control rule (HCR) curve along with 
-#' optional observed values.
-#' @param args list. The list of parameters used by the buffer.hcr function.
-#' @param obs  Observed values to overlay on the plot.
-#' @param alpha Alpha transparency for observed points/lines.
-#' @param labels Labels for the plot annotations. A list with names among 'lim', 'bufflow', 'buffupp', 'metric', and 'output'.
-#' @param metric The metric name used for the x-axis label.
-#' @param output The output name used for the y-axis label.
-#' @param xlim The maximum x-axis limit for the plot.
-#' @param ylim The maximum y-axis limit for the plot.
-#' @return ggplot2 object
+#' The buffer harvest control rule is defined by threshold values that partition
+#' the x-axis metric into zones:
+#' \itemize{
+#'   \item below `lim`: critical zone;
+#'   \item between `lim` and `bufflow`: recovery zone;
+#'   \item between `bufflow` and `buffupp`: buffer zone;
+#'   \item above `buffupp`: above-target zone.
+#' }
+#'
+#' [plot_buffer.hcr()] evaluates the implied HCR multiplier across a sequence of
+#' metric values and draws the resulting curve, including annotations for the
+#' key thresholds.
+#'
+#' [buffer_bands()] constructs semi-transparent shaded rectangles spanning these
+#' threshold intervals to support interpretation of HCR plots.
+#'
+#' @section plot_buffer.hcr:
+#' `plot_buffer.hcr()` computes the HCR response curve from the supplied buffer
+#' rule parameters and returns a ggplot object. The plot includes:
+#' \itemize{
+#'   \item the HCR line;
+#'   \item vertical reference markers for `lim`, `bufflow`, and `buffupp`;
+#'   \item labels for the threshold points;
+#'   \item optional observed points or trajectories.
+#' }
+#'
+#' If `obs` is an `FLStock` object, the function extracts the chosen `metric`
+#' and `output` values using [metrics()] and overlays them on the HCR curve. If
+#' there is a single iteration, both points and a path are added, and first/last
+#' years are labelled.
+#'
+#' If `obs` is numeric, a single red point is placed at the corresponding
+#' location on the HCR curve.
+#'
+#' @section buffer_bands:
+#' `buffer_bands()` extracts `lim`, `bufflow`, and `buffupp` from `args(x)` and
+#' defines four contiguous x-axis intervals. A fourth threshold,
+#' `target = 1.5 * buffupp`, is used as the upper bound for the final tier.
+#'
+#' The returned rectangles extend from `y = 0` to `y = Inf`, so they occupy the
+#' full vertical plotting range.
+#'
+#' @section Assumptions and caveats:
+#' \itemize{
+#'   \item Thresholds are assumed to satisfy
+#'     `0 <= lim <= bufflow <= buffupp`.
+#'   \item `buffer_bands()` adds a fill scale and may therefore override an
+#'     existing fill scale in a ggplot object.
+#'   \item In [plot_buffer.hcr()], default values such as `xlim` and `ylim`
+#'     depend on objects created after argument expansion and may rely on the
+#'     surrounding evaluation framework.
+#'   \item `plot_buffer.hcr()` currently uses internal helper functions such as
+#'     [spread()], [args()], and [metrics()], and assumes these are available.
+#' }
+#'
+#' @seealso [args()], [metrics()], [ggplot2::geom_line()],
+#'   [ggplot2::geom_rect()], [ggplot2::scale_fill_manual()]
+#'
+#' @examples
+#' \dontrun{
+#' args <- list(lim = 0.4, bufflow = 1, buffupp = 2, sloperatio = 0.2)
+#'
+#' # Plot the HCR curve
+#' plot_buffer.hcr(args, labels = list(metric = "CPUE", output = "C~mult"))
+#'
+#' # Add buffer bands to a custom ggplot
+#' layers <- buffer_bands(hcr)
+#' p <- ggplot(dat, aes(x = biomass, y = harvest)) + geom_line()
+#' for (ly in layers) p <- p + ly
+#' p
+#' }
+#'
+#' @author Iago Mosqueira, WMR; Richard Hillary, CSIRO
+#' @keywords hplot
+#' @name buffer.hcr
 
 plot_buffer.hcr <- function(args, obs="missing", alpha=0.3,
   labels=c(lim="Limit", bufflow="Lower~buffer", buffupp="Upper~buffer",
@@ -237,11 +371,6 @@ plot_buffer.hcr <- function(args, obs="missing", alpha=0.3,
   return(p)
 }
 
-# args <- list(lim=0.4, bufflow=1, buffupp=2,
-#   sloperatio=0.2)
-
-# plot_buffer.hcr(args, labels=list(metric='CPUE', output='C~mult'))
-
 # }}}
 
 # buffer_bands {{{
@@ -278,16 +407,126 @@ buffer_bands <- function(x) {
 
 # depletion.hcr {{{
 
-#' Depletion Harvest Control Rule (HCR)
+#' Depletion-based harvest control rule
 #'
-#' Implements a depletion-based harvest control rule (HCR), adjusting harvest rates and TAC (Total Allowable Catch)
-#' based on stock status relative to depletion thresholds.
+#' Implements a depletion-based harvest control rule (HCR) in which management
+#' output is scaled according to stock status relative to carrying capacity.
 #'
-#' @param stk `FLStock`. The stock object to which the HCR applies.
-#' @param ind `FLQuant`. The abundance index used as input for computing adjustments.
-#' @param metric Character or function. The metric applied to measure stock status. Default is `'ssb'` (spawning stock biomass).
-#' @param mult Numeric. A scaling multiplier for adjusting the harvest rate. Default is `1`.
-#' @param hrmsy Numeric. Harvest rate that achieves maximum sustainable yield (MSY
+#' The rule uses the ratio of a selected stock metric to `K` as a depletion
+#' indicator and adjusts the harvest rate relative to `hrmsy` depending on
+#' whether the stock is above a trigger level, between a limit and trigger, or
+#' below the limit.
+#'
+#' @param stk A stock object, typically an `FLStock`, used together with `ind`
+#'   to compute the selected metric.
+#' @param ind An FLQuant object containing metrics to be used by the HCR.
+#' @param metric Character string specifying the metric to use in the HCR.
+#'   Passed to [selectMetric()]. Defaults to `"ssb"`.
+#' @param mult Numeric multiplier applied to the harvest rate after scaling by
+#'   the decision rule. Defaults to `1`.
+#' @param hrmsy Numeric target harvest rate associated with MSY conditions.
+#' @param K Numeric carrying capacity or proxy scaling constant used to convert
+#'   the metric into a depletion ratio.
+#' @param trigger Numeric depletion threshold above which the HCR applies the
+#'   full harvest rate. Defaults to `0.4`.
+#' @param lim Numeric depletion limit reference point below which the HCR
+#'   applies the minimum multiplier. Defaults to `0.1`.
+#' @param min Numeric minimum multiplier applied when depletion falls below
+#'   `lim`. Defaults to `0.00001`.
+#' @param initial Optional numeric initial output value used when interannual
+#'   change constraints are applied in the first management year.
+#' @param dupp Optional numeric upper bound on proportional increase in output.
+#'   If not `NULL`, output increases are capped at `pre * dupp`.
+#' @param dlow Optional numeric lower bound on proportional decrease in output.
+#'   If not `NULL`, output decreases are floored at `pre * dlow`.
+#' @param all Logical. If `TRUE`, change constraints are always applied. If
+#'   `FALSE`, they are only applied when the metric is below `trigger`.
+#'   Defaults to `TRUE`.
+#' @param ... Additional arguments intended for downstream metric calculation.
+#' @param args A list of auxiliary framework arguments unpacked by [spread()].
+#'   The function expects at least `ay`, `iy`, `dy`, `mys`, `data_lag`,
+#'   `management_lag`, and `it`.
+#' @param tracking A tracking object updated throughout the [mse::mp()] evaluation.
+#'
+#' @return
+#' A named list with components:
+#' \itemize{
+#'   \item `ctrl`: an `fwdControl` object specifying the catch target for the
+#'     management years in `mys`;
+#'   \item `tracking`: the updated tracking object containing recorded metric,
+#'     decision, tier, and output values.
+#' }
+#'
+#' @details
+#' The function first computes the selected metric from `stk` and `ind` using
+#' [selectMetric()], restricted to the terminal data year `dy`. This metric is
+#' tracked under `"metric.hcr"`.
+#'
+#' Stock status is then expressed as the depletion ratio:
+#' \deqn{met / K}
+#'
+#' The decision multiplier is calculated as a piecewise function:
+#' \itemize{
+#'   \item if `met / K >= trigger`, the multiplier is `1`;
+#'   \item if `lim <= met / K < trigger`, the multiplier increases linearly from
+#'     `0` at `lim` to `1` at `trigger`;
+#'   \item if `met / K < lim`, the multiplier is set to `min`.
+#' }
+#'
+#' This multiplier is recorded in `tracking` under `"decision.hcr"`.
+#'
+#' The rule also classifies stock status into three tiers based on depletion:
+#' \itemize{
+#'   \item Tier 1: below `lim`;
+#'   \item Tier 2: between `lim` and `trigger`;
+#'   \item Tier 3: at or above `trigger`.
+#' }
+#'
+#' Tier membership is stored under `"tier.hcr"`.
+#'
+#' A harvest-rate target is then computed as:
+#' \deqn{hrtarget = hrmsy \times dec \times mult}
+#'
+#' and management output is set as:
+#' \deqn{out = met \times hrtarget}
+#'
+#' This provisional output is stored under `"output.hcr"` before optional upper
+#' and lower change constraints are applied.
+#'
+#' If `dupp` and/or `dlow` are supplied, the previous output value is recovered
+#' either from `initial` in the first management year or from the tracking
+#' object in later years. The provisional output is then capped and/or floored
+#' according to the specified proportional limits.
+#'
+#' Finally, missing values are replaced with zero and the result is converted to
+#' an [fwdControl()] object with one catch target per management year.
+#'
+#' @section Change constraints:
+#' If `dupp` is supplied, increases in output can be capped. If `dlow` is
+#' supplied, decreases can be limited. When `all = TRUE`, these constraints are
+#' always applied. When `all = FALSE`, they are only applied when the metric is
+#' below the `trigger`, allowing unconstrained changes when stock status is at
+#' or above the trigger level.
+#'
+#' @section Assumptions and caveats:
+#' \itemize{
+#'   \item The function assumes `spread(args[...])` creates `ay`, `iy`, `dy`,
+#'     `mys`, and `it` in scope.
+#'   \item Although `...` is declared, it is not currently passed on in the call
+#'     to [selectMetric()] in the implementation shown.
+#'   \item The previous output retrieval uses
+#'     `tracking[metric == 'hcr' & year == ay, data]`, which assumes a specific
+#'     internal structure for `tracking`.
+#'   \item `track(tracking, "decision.hcr", mys)` stores the decision for all
+#'     management years, whereas `track(tracking, "tier.hcr", ay)` stores tier
+#'     at assessment year resolution.
+#'   \item Missing outputs are silently converted to zero.
+#' }
+#'
+#' @seealso [buffer.hcr()], [selectMetric()], [fwdControl()], [track()]
+#'
+#' @author Iago Mosqueira, WMR
+#' @keywords models
 
 depletion.hcr <- function(stk, ind, metric='ssb', mult=1, hrmsy, K,
   trigger=0.4, lim=0.1, min=0.00001, initial, dupp=NULL, dlow=NULL, all=TRUE,

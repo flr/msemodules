@@ -7,6 +7,8 @@
 # Distributed under the terms of the EUPL-1.2
 
 
+globalVariables(c("metric"))
+
 # bank_borrow.is {{{
 
 #' bank_borrow.isys
@@ -148,17 +150,12 @@ bank_borrow.is <- function(stk, ctrl, args, split=NULL, rate = NULL, diff = 0.15
 #'
 #' @details
 #' The function calculates the effort multiplier as:
-#' \deqn{mult = \frac{target}{F_{ref}}}{mult = target / Fref}
-#'
-#' This multiplier is then stored in the control object with years
-#' adjusted backwards by `data_lag` to account for assessment lag.
+#' \deqn{mult = \frac{target}{Fref}}{mult = target / Fref}
 #'
 #' @note
 #' The `ctrl$quant` parameter must be one of "f", "fbar", or "effort".
 #' Other values will cause the function to stop with an error.
 #'
-#' @seealso
-#'   \code{\link{fbar}} for calculating mean fishing mortality,
 #' @examples
 #' # Example dataset
 #' data(plesim)
@@ -203,6 +200,5 @@ effort.is <- function(stk, ctrl, nyears=args$nsqy,
   # TODO: TEST and SET for relative ctrl$fishery, biol, catch
 
   return(list(ctrl = ctrl, tracking = tracking))
-
 }
 # }}}

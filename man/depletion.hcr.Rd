@@ -2,7 +2,7 @@
 % Please edit documentation in R/hcr.R
 \name{depletion.hcr}
 \alias{depletion.hcr}
-\title{Depletion Harvest Control Rule (HCR)}
+\title{Depletion-based harvest control rule}
 \usage{
 depletion.hcr(
   stk,
@@ -24,17 +24,144 @@ depletion.hcr(
 )
 }
 \arguments{
-\item{stk}{\code{FLStock}. The stock object to which the HCR applies.}
+\item{stk}{A stock object, typically an \code{FLStock}, used together with \code{ind}
+to compute the selected metric.}
 
-\item{ind}{\code{FLQuant}. The abundance index used as input for computing adjustments.}
+\item{ind}{An FLQuant object containing metrics to be used by the HCR.}
 
-\item{metric}{Character or function. The metric applied to measure stock status. Default is \code{'ssb'} (spawning stock biomass).}
+\item{metric}{Character string specifying the metric to use in the HCR.
+Passed to \code{\link[mse:selectMetric]{mse::selectMetric()}}. Defaults to \code{"ssb"}.}
 
-\item{mult}{Numeric. A scaling multiplier for adjusting the harvest rate. Default is \code{1}.}
+\item{mult}{Numeric multiplier applied to the harvest rate after scaling by
+the decision rule. Defaults to \code{1}.}
 
-\item{hrmsy}{Numeric. Harvest rate that achieves maximum sustainable yield (MSY}
+\item{hrmsy}{Numeric target harvest rate associated with MSY conditions.}
+
+\item{K}{Numeric carrying capacity or proxy scaling constant used to convert
+the metric into a depletion ratio.}
+
+\item{trigger}{Numeric depletion threshold above which the HCR applies the
+full harvest rate. Defaults to \code{0.4}.}
+
+\item{lim}{Numeric depletion limit reference point below which the HCR
+applies the minimum multiplier. Defaults to \code{0.1}.}
+
+\item{min}{Numeric minimum multiplier applied when depletion falls below
+\code{lim}. Defaults to \code{0.00001}.}
+
+\item{initial}{Optional numeric initial output value used when interannual
+change constraints are applied in the first management year.}
+
+\item{dupp}{Optional numeric upper bound on proportional increase in output.
+If not \code{NULL}, output increases are capped at \code{pre * dupp}.}
+
+\item{dlow}{Optional numeric lower bound on proportional decrease in output.
+If not \code{NULL}, output decreases are floored at \code{pre * dlow}.}
+
+\item{all}{Logical. If \code{TRUE}, change constraints are always applied. If
+\code{FALSE}, they are only applied when the metric is below \code{trigger}.
+Defaults to \code{TRUE}.}
+
+\item{...}{Additional arguments intended for downstream metric calculation.}
+
+\item{args}{A list of auxiliary framework arguments unpacked by \code{\link[FLCore:spread]{FLCore::spread()}}.
+The function expects at least \code{ay}, \code{iy}, \code{dy}, \code{mys}, \code{data_lag},
+\code{management_lag}, and \code{it}.}
+
+\item{tracking}{A tracking object updated throughout the \code{\link[mse:mp]{mse::mp()}} evaluation.}
+}
+\value{
+A named list with components:
+\itemize{
+\item \code{ctrl}: an \code{fwdControl} object specifying the catch target for the
+management years in \code{mys};
+\item \code{tracking}: the updated tracking object containing recorded metric,
+decision, tier, and output values.
+}
 }
 \description{
-Implements a depletion-based harvest control rule (HCR), adjusting harvest rates and TAC (Total Allowable Catch)
-based on stock status relative to depletion thresholds.
+Implements a depletion-based harvest control rule (HCR) in which management
+output is scaled according to stock status relative to carrying capacity.
 }
+\details{
+The rule uses the ratio of a selected stock metric to \code{K} as a depletion
+indicator and adjusts the harvest rate relative to \code{hrmsy} depending on
+whether the stock is above a trigger level, between a limit and trigger, or
+below the limit.
+
+The function first computes the selected metric from \code{stk} and \code{ind} using
+\code{\link[mse:selectMetric]{mse::selectMetric()}}, restricted to the terminal data year \code{dy}. This metric is
+tracked under \code{"metric.hcr"}.
+
+Stock status is then expressed as the depletion ratio:
+\deqn{met / K}
+
+The decision multiplier is calculated as a piecewise function:
+\itemize{
+\item if \code{met / K >= trigger}, the multiplier is \code{1};
+\item if \verb{lim <= met / K < trigger}, the multiplier increases linearly from
+\code{0} at \code{lim} to \code{1} at \code{trigger};
+\item if \code{met / K < lim}, the multiplier is set to \code{min}.
+}
+
+This multiplier is recorded in \code{tracking} under \code{"decision.hcr"}.
+
+The rule also classifies stock status into three tiers based on depletion:
+\itemize{
+\item Tier 1: below \code{lim};
+\item Tier 2: between \code{lim} and \code{trigger};
+\item Tier 3: at or above \code{trigger}.
+}
+
+Tier membership is stored under \code{"tier.hcr"}.
+
+A harvest-rate target is then computed as:
+\deqn{hrtarget = hrmsy \times dec \times mult}
+
+and management output is set as:
+\deqn{out = met \times hrtarget}
+
+This provisional output is stored under \code{"output.hcr"} before optional upper
+and lower change constraints are applied.
+
+If \code{dupp} and/or \code{dlow} are supplied, the previous output value is recovered
+either from \code{initial} in the first management year or from the tracking
+object in later years. The provisional output is then capped and/or floored
+according to the specified proportional limits.
+
+Finally, missing values are replaced with zero and the result is converted to
+an \code{\link[FLasher:fwdControl]{FLasher::fwdControl()}} object with one catch target per management year.
+}
+\section{Change constraints}{
+
+If \code{dupp} is supplied, increases in output can be capped. If \code{dlow} is
+supplied, decreases can be limited. When \code{all = TRUE}, these constraints are
+always applied. When \code{all = FALSE}, they are only applied when the metric is
+below the \code{trigger}, allowing unconstrained changes when stock status is at
+or above the trigger level.
+}
+
+\section{Assumptions and caveats}{
+
+\itemize{
+\item The function assumes \code{spread(args[...])} creates \code{ay}, \code{iy}, \code{dy},
+\code{mys}, and \code{it} in scope.
+\item Although \code{...} is declared, it is not currently passed on in the call
+to \code{\link[mse:selectMetric]{mse::selectMetric()}} in the implementation shown.
+\item The previous output retrieval uses
+\code{tracking[metric == 'hcr' & year == ay, data]}, which assumes a specific
+internal structure for \code{tracking}.
+\item \code{track(tracking, "decision.hcr", mys)} stores the decision for all
+management years, whereas \code{track(tracking, "tier.hcr", ay)} stores tier
+at assessment year resolution.
+\item Missing outputs are silently converted to zero.
+}
+}
+
+\seealso{
+\code{\link[=buffer.hcr]{buffer.hcr()}}, \code{\link[mse:selectMetric]{mse::selectMetric()}}, \code{\link[FLasher:fwdControl]{FLasher::fwdControl()}}, \code{\link[=track]{track()}}
+}
+\author{
+Iago Mosqueira, WMR
+}
+\keyword{models}

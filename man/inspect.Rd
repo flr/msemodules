@@ -11,7 +11,7 @@ inspect(tab, metrics = NULL, summary = medmad)
 
 \item{metrics}{A character vector specifying the metrics to include in the output. If a single character value is given and it does not match excatly any of the contained metrics, it is used to subset using the datatable::\%ilike\% function. The special value \code{"decisions"} can be used to select all metrics from \code{"hcr"} onward. If \code{NULL}, the default, all metrics are returned.}
 
-\item{summary}{A function (such as \code{mean} or \code{median}) to summarize the \code{data} column within the tracking \code{data.table} across rthe \code{iter} dimension. Defaults to \code{medmad} which returns a string with  \code{"Median (Median Absolute Deviation)"}.}
+\item{summary}{A function (such as \code{mean} or \code{median}) to summarize the \code{data} column within the tracking \code{data.table} across rthe \code{iter} dimension. Defaults to \code{medmad} which returns a string with \code{"Median (Median Absolute Deviation)"}.}
 }
 \value{
 A \code{data.table} where rows correspond to years and columns to selected metrics, with the tracking \code{data} aggregated using the specified summary function.
