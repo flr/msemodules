@@ -6,7 +6,8 @@ import("data.table")
 
 importFrom("stats",
   "dist",
-  "mad")
+  "mad",
+  "setNames")
 
 importFrom("FLasher",
   "fwdControl")
@@ -19,6 +20,8 @@ importFrom("ggplot2",
   "geom_line",
   "geom_path",
   "geom_point",
+  "geom_rect",
+  "scale_fill_manual",
   "xlab",
   "ylab"
   )
@@ -34,7 +37,6 @@ export(
   "getOMPerformance",
   "inspect",
   "labelPerformance",
-  "medmad",
   "performanceFLQuant",
   "performanceFLQuants",
   "periodsPerformance",
