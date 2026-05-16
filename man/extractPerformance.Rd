@@ -2,10 +2,75 @@
 % Please edit documentation in R/performance.R
 \name{extractPerformance}
 \alias{extractPerformance}
-\title{Extracts performance time series for an MP including the corresponding historical OM}
+\title{Extract performance data for one or more management procedures}
 \usage{
 extractPerformance(dat, mp)
 }
-\description{
-Extracts performance time series for an MP including the corresponding historical OM
+\arguments{
+\item{dat}{A performance statistics \code{data.table} containing at least the
+columns \code{om} and \code{mp}.}
+
+\item{mp}{A character string used to match management procedures. Matching is
+performed with \verb{\%like\%}, so partial strings or patterns can be used.}
 }
+\value{
+A subset of \code{dat} containing:
+\itemize{
+\item rows for management procedures whose \code{mp} matches the supplied
+pattern; and
+\item rows for the corresponding operating model(s), identified as rows
+where \code{om} matches the selected subset and \code{mp} is empty (\code{""}).
+}
+}
+\description{
+Subsets a performance table to return the time series corresponding to one or
+more management procedures (\code{mp}) together with the associated historical
+operating model (\code{om}) rows.
+}
+\details{
+This is useful when comparing the performance of a selected management
+procedure against its corresponding operating model baseline.
+
+The function first identifies all rows whose \code{mp} matches the supplied
+pattern using \code{\link[data.table:like]{data.table::like()}} syntax via \verb{\%like\%}. From this subset, it
+extracts the unique matching management procedures and associated operating
+models. It then returns all rows in the original table that belong either to:
+\itemize{
+\item one of the matched management procedures, or
+\item the corresponding operating model baseline rows.
+}
+
+This design makes it easy to compare projected management procedure
+trajectories against the historical or reference operating model records.
+}
+\section{Current limitations}{
+
+\itemize{
+\item The function contains a TODO note indicating future support for
+parsing multiple management procedure inputs more explicitly.
+\item Matching is pattern-based rather than exact, so care should be taken
+when \code{mp} names overlap.
+\item The function assumes baseline operating model rows are identified by
+an empty string in the \code{mp} column.
+}
+}
+
+\examples{
+\dontrun{
+dat <- readPerformance()
+
+# Extract rows for one MP pattern and its corresponding OM
+sub <- extractPerformance(dat, "HCR1")
+
+# Because matching uses \%like\%, partial patterns can be used
+sub2 <- extractPerformance(dat, "MP")
+}
+
+}
+\seealso{
+\code{\link[=labelPerformance]{labelPerformance()}}, \code{\link[=periodsPerformance]{periodsPerformance()}}
+}
+\author{
+Iago Mosqueira, WMR
+}
+\keyword{manip}

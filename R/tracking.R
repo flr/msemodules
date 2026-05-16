@@ -6,6 +6,9 @@
 #
 # Distributed under the terms of the EUPL-1.2
 
+
+globalVariables(c("..metord"))
+
 # medmad {{{
 
 medmad <- function(x) paste0(format(median(x), digits=3), " (",
@@ -23,7 +26,7 @@ medmad <- function(x) paste0(format(median(x), digits=3), " (",
 #'
 #' @param tab An `FLms+e` object or a `data.table` containing tracking data. If an `FLmse` object is supplied, the `tracking` slot is extracted.
 #' @param metrics A character vector specifying the metrics to include in the output. If a single character value is given and it does not match excatly any of the contained metrics, it is used to subset using the datatable::%ilike% function. The special value `"decisions"` can be used to select all metrics from `"hcr"` onward. If `NULL`, the default, all metrics are returned.
-#' @param summary A function (such as `mean` or `median`) to summarize the `data` column within the tracking `data.table` across rthe `iter` dimension. Defaults to `medmad` which returns a string with  `"Median (Median Absolute Deviation)"`.
+#' @param summary A function (such as `mean` or `median`) to summarize the `data` column within the tracking `data.table` across rthe `iter` dimension. Defaults to `medmad` which returns a string with `"Median (Median Absolute Deviation)"`.
 #' @details
 #' The function processes the table on the `tracking` slot by:
 #'   - Arranging metrics based on the order in which they are produced inside `mp()`.

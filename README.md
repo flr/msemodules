@@ -1,8 +1,9 @@
 # mse <img src="man/figures/logo.png" align="right" width="120" />
 
-![r-universe](https://flr.r-universe.dev/badges/msemodules)
-[![License](https://flrproject.org/img/eupl12.svg)](https://eupl.eu/1.2/en)
 
+[![License](https://flrproject.org/img/eupl_1.2.svg)](https://eupl.eu/1.2/en)
+[![r-universe](https://flr.r-universe.dev/badges/msemodules)](https://flr.r-universe.dev/msemodules)
+[![GitHub issues](https://img.shields.io/github/issues/flr/msemodules)](https://github.com/flr/msemodules/issues)
 ## Overview
 
 Modules and Functions for the mse Package
@@ -24,7 +25,7 @@ remotes::install_github("flr/msemodules")
 - [Help pages](http://flrproject.org/msemodules)
 
 ## License
-Copyright (c) 2016-2022 European Union. European Commission Joint Research Centre D.02. Released under the [EUPL 1.1](https://joinup.ec.europa.eu/community/eupl/og_page/eupl).
+Copyright (c) 2026 Wageningen University & Research (WUR) Released under the [EUPL 1.2](https://eupl.eu/1.2/en).
 
 ## Contact
 You are welcome to:

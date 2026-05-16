@@ -42,10 +42,7 @@ relative to a (dynamic) reference fishing mortality level.
 }
 \details{
 The function calculates the effort multiplier as:
-\deqn{mult = \frac{target}{F_{ref}}}{mult = target / Fref}
-
-This multiplier is then stored in the control object with years
-adjusted backwards by \code{data_lag} to account for assessment lag.
+\deqn{mult = \frac{target}{Fref}}{mult = target / Fref}
 }
 \note{
 The \code{ctrl$quant} parameter must be one of "f", "fbar", or "effort".
@@ -70,7 +67,4 @@ run_nois <- mp(om, control=ctrl[-3], args=list(iy=2021, fy=2035))
 
 # Plots results
 plot(om, effort.is=run, no_is=run_nois)
-}
-\seealso{
-\code{\link{fbar}} for calculating mean fishing mortality,
 }
