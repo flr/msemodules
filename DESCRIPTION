@@ -7,6 +7,7 @@ Authors@R:
 Description: A number of additional modules and auxiliary functions for the 'mse' package are provided here.
 URL: https://msemodules.flrproject.org/, https://github.com/flr/msemodules
 BugReports: https://github.com/flr/msemodules/issues
+Additional_repositories: https://flr.r-universe.dev
 Depends:
   R(>= 4.1),
   FLCore,
