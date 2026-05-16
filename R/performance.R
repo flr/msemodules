@@ -1,5 +1,5 @@
 # performance.R - DESC
-# /home/mosqu003/Projects/FLR/code/mse/msemodules/msemodules/R/performance.R
+# msemodules/msemodules/R/performance.R
 
 # Copyright (c) WMR, 2026.
 # Author: Iago MOSQUEIRA <iago.mosqueira@wur.nl>
