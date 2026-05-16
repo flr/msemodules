@@ -2,7 +2,7 @@
 % Please edit documentation in R/isys.R
 \name{bank_borrow.is}
 \alias{bank_borrow.is}
-\title{bank_borrow.isys}
+\title{Banking and borrowing implementation system method}
 \usage{
 bank_borrow.is(
   stk,
@@ -16,62 +16,103 @@ bank_borrow.is(
 )
 }
 \arguments{
-\item{stk}{\code{FLStock} object representing the stock dat.}
+\item{stk}{An \link[FLCore:FLStock]{FLCore::FLStock} object representing the stock.}
 
-\item{ctrl}{\code{fwdControl} object for forward projection controls.}
+\item{ctrl}{An \link[FLasher:fwdControl]{FLasher::fwdControl} object carrying the TAC
+recommendation to be adjusted.}
 
-\item{args}{List of additional arguments required for the execution.}
+\item{args}{A list of management-cycle dimensionality arguments supplied
+automatically by \code{\link[mse:mp]{mse::mp()}}. Must contain at least \code{iy}, \code{ay}, \code{frq},
+and \code{management_lag}.}
 
-\item{split}{Optional. Input for splitting controls (default is \code{NULL}).}
+\item{split}{Optional split-control input. Currently unused; reserved for
+future support of multiple \link[mse:mseCtrl-class]{mse::mseCtrl} objects within a single
+\code{isys} step. Defaults to \code{NULL}.}
 
-\item{rate}{Numeric. Proportion rate for borrowing and banking adjustments (default is \code{NULL}).}
+\item{rate}{Numeric in \eqn{[0, 1]}. Proportion of the TAC to bank or
+borrow when the threshold condition is met. Must be supplied; there is no
+default.}
 
-\item{diff}{Numeric. Tolerance difference for determining borrowing or banking actions (default is 0.15).}
+\item{diff}{Numeric. Minimum relative change in TAC (compared to the
+previous HCR decision \code{pre}) required to trigger a banking or borrowing
+action. Defaults to \code{0.15}, i.e. a 15\% change.}
 
-\item{healthy}{Numeric. Threshold for determining stock health (default is 3).}
+\item{healthy}{Numeric. Minimum value of the \code{rule.hcr} tracking metric
+required for the stock to be considered healthy enough for banking or
+borrowing to be applied. Defaults to \code{1}.}
 
-\item{tracking}{Data structure. Object to track borrowing and banking values over time.}
+\item{tracking}{An \link[FLCore:FLQuant]{FLCore::FLQuant} used to record intermediate
+values and decisions during MP evaluation, passed through and updated by
+\code{\link[mse:mp]{mse::mp()}}.}
 }
 \value{
-A list containing:
-\item{ctrl}{Modified \code{fwdControl} object with updated TAC values.}
-\item{tracking}{Updated tracking data structure with recorded borrowing and banking amounts.}
+A list with two elements:
+\describe{
+\item{\code{ctrl}}{The input \link[FLasher:fwdControl]{FLasher::fwdControl} object with the
+adjusted TAC stored in \code{ctrl$value}.}
+\item{\code{tracking}}{The updated tracking object, with \code{borrowing.isys} and
+\code{banking.isys} metrics written for the assessment year \code{ay}.}
+}
 }
 \description{
-Banking and Borrowing Mechanism for TAC Adjustment
+Adjusts a TAC recommendation from an HCR by banking a proportion of any
+increase or borrowing against a future quota when a decrease is large,
+smoothing inter-annual TAC variability while respecting stock health
+conditions.
 }
 \details{
-The function performs the following:
+In the initial year (\code{ay == iy}) the tracking metrics \code{borrowing.isys} and
+\code{banking.isys} are initialized to zero and the reference TAC (\code{pre}) is set
+to the realized catch in the year preceding the management lag.
+
+In subsequent years \code{pre} is taken from the \code{hcr} tracking metric for the
+current year, and the TAC carried in \code{ctrl} is first corrected for any
+amount borrowed or banked in the previous cycle before new banking/borrowing
+is evaluated.
+
+Banking and borrowing are triggered as follows:
 \itemize{
-\item Checks if management assumes annual (frq = 1). Raises an error if not.
-\item Retrieves and adjusts TAC for previous banking and borrowing actions.
-\item Verifies the stock's health status (\code{healthy}) using tracking data to determine eligibility for banking/borrowing.
-\item Calculates borrowing if TAC is significantly lower than the reference (\code{pre}) and banking if TAC is significantly higher.
-\item Updates the \code{ctrl} and \code{tracking} objects with the adjusted TAC and banking/borrowing amounts.
+\item \strong{Borrowing}: if the (corrected) TAC falls more than \code{diff} below
+\code{pre} \emph{and} the stock is healthy, \code{rate * tac} is added to the
+current TAC and recorded in \code{borrowing.isys}.
+\item \strong{Banking}: if the (corrected) TAC rises more than \code{diff} above
+\code{pre} \emph{and} the stock is healthy, \code{rate * tac} is subtracted from
+the current TAC and recorded in \code{banking.isys}.
 }
-}
-\note{
-Banking and borrowing adjustments are applied only when the frequency (\code{frq}) is equal to 1.
+
+Only annual management cycles (\code{frq == 1}) are currently supported; a
+non-annual \code{frq} raises an error.
 }
 \examples{
-# Example dataset
+\dontrun{
 data(sol274)
 
-# Sets up an mpCtrl using hockeystick(catch~ssb) + bank_borrow(10\%)
-ctrl <- mpCtrl(est = mseCtrl(method=perfect.sa),
-  hcr = mseCtrl(method=hockeystick.hcr, args=list(metric="ssb", trigger=42000, 
-    output="catch", target=11000)),
-  isys = mseCtrl(method=bank_borrow.is, args=list(rate=0.10, healthy=2, diff=0.05)))
+# mpCtrl combining a hockey-stick HCR with 10\% banking/borrowing
+ctrl <- mpCtrl(
+  est   = mseCtrl(method = perfect.sa),
+  hcr   = mseCtrl(method = hockeystick.hcr,
+            args = list(metric = "ssb", trigger = 42000,
+                        output = "catch", target = 11000)),
+  isys  = mseCtrl(method = bank_borrow.is,
+            args = list(rate = 0.10, healthy = 2, diff = 0.05)))
 
-# Runs the MP
-run <- mp(om, control=ctrl, args=list(iy=2021, fy=2035))
+run <- mp(om, control = ctrl, args = list(iy = 2021, fy = 2035))
 
-# Plot time series
-plot(om, list(BaB=run))
+plot(om, list(BaB = run))
 
-# Observe from tracking the TAC-setting steps
+# Inspect the TAC-setting steps from the tracking object
 items <- c("year", "hcr", "banking.isys", "borrowing.isys", "isys", "fwd")
-
-dcast(tracking(run)[metric \%in\% items[-1], .(data=mean(data)), by=.(year, metric)],
-  year~metric, value.var='data')[, ..items]
+dcast(
+  tracking(run)[metric \%in\% items[-1],
+    .(data = mean(data)), by = .(year, metric)],
+  year ~ metric, value.var = "data")[, ..items]
 }
+
+}
+\seealso{
+\code{\link[mse:mp]{mse::mp()}}, \code{\link[mse:mpCtrl-class]{mse::mpCtrl()}}, \code{\link[mse:mseCtrl-class]{mse::mseCtrl()}}
+}
+\author{
+Iago MOSQUEIRA \href{mailto:iago.mosqueira@wur.nl}{iago.mosqueira@wur.nl}
+}
+\keyword{manip}

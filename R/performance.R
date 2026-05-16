@@ -13,13 +13,195 @@ globalVariables(c("unit"))
 
 # writePerformance {{{
 
-#' Write performance table to file
+#' Read and write performance statistics tables
 #'
-#' @param dat data.table with performance statistics.
-#' @param file file to write to, defaults to 'model/performance.dat.gz' a compressed text file.
-#' @return file name, invisibly.
-#' @author Iago Mosqueira, WMR
-#' @keywords utilities
+#' A family of utilities for persisting, retrieving, labelling, summarizing,
+#' and reshaping performance statistics tables produced by
+#' [mse::performance()].
+#'
+#' \describe{
+#'   \item{[writePerformance()]}{Serializes a table to disk, merging with any
+#'     existing file.}
+#'   \item{[readPerformance()]}{Reads a stored table and restores column
+#'     classes, key, and factor levels.}
+#'   \item{[summaryPerformance()]}{Prints a compact console summary.}
+#'   \item{[labelPerformance()]}{Adds or replaces the \code{label} column.}
+#'   \item{[setLabelPerformance()]}{Reads, re-labels, and overwrites a stored
+#'     table.}
+#'   \item{[periodsPerformance()]}{Aggregates annual statistics into
+#'     user-defined periods.}
+#'   \item{[extractPerformance()]}{Subsets to selected MPs together with their
+#'     OM baseline rows.}
+#'   \item{[getOMPerformance()]}{Batch-reads OM files and returns a combined
+#'     performance table.}
+#'   \item{[getMSEPerformance()]}{Batch-reads MSE result files and returns a
+#'     combined performance table.}
+#' }
+#'
+#' @param dat A `data.table` containing performance statistics, as returned by
+#'   [mse::performance()], or an object of class `FLmse` or `FLmses` from
+#'   which performance statistics can be extracted automatically.
+#' @param file A character string giving the path to the performance table
+#'   file. Defaults to `"model/performance.dat.gz"`. The `.gz` extension
+#'   causes [data.table::fwrite()] / [data.table::fread()] to use gzip
+#'   compression transparently.
+#' @param overwrite Logical. If `TRUE`, any existing file at `file` is
+#'   overwritten entirely. If `FALSE` (default), existing rows not conflicting
+#'   with `dat` are preserved and new rows are appended; conflicts are resolved
+#'   by an anti-join on `biol`, `statistic`, `year`, `iter`, `om`, `type`,
+#'   and `run`.
+#' @param labels The labelling specification used by [labelPerformance()] and
+#'   [setLabelPerformance()]. Accepted forms:
+#'   \describe{
+#'     \item{`NULL` (default)}{Each row is labelled by its `mp` value if one
+#'       is present, or by `om` otherwise.}
+#'     \item{`"numeric"`}{Management procedures are assigned sequential labels
+#'       `"MP1"`, `"MP2"`, … in the order they appear.}
+#'     \item{A named `list`}{Names are matched against `mp` (or `om`) and the
+#'       values are used as labels.}
+#'     \item{A `data.frame` or `data.table`}{Must contain columns `element`
+#'       and `label`; `element` is matched against `mp` (or `om`).}
+#'   }
+#' @param x A `data.table` containing performance statistics for
+#'   [periodsPerformance()], as returned by [mse::performance()] or
+#'   [readPerformance()]. Must contain at least `year`, `data`, `type`, `mp`,
+#'   `statistic`, `name`, `desc`, and `iter`.
+#' @param periods A vector or list whose elements define the years belonging to
+#'   each period (used by [periodsPerformance()]). Named elements use the name
+#'   as the period label; unnamed elements are labelled automatically from the
+#'   year range (e.g. `"2026-35"`).
+#' @param mp A character string used by [extractPerformance()] to match
+#'   management procedure identifiers via [data.table::like()] (`%like%`), so
+#'   partial strings and regular-expression patterns are accepted.
+#' @param path A character string giving the directory containing serialized
+#'   files, used by [getOMPerformance()] and [getMSEPerformance()].
+#' @param pattern A character string passed to [base::list.files()] to filter
+#'   which files are read. Defaults to `"*.rds"`.
+#' @param fy The final year to which each operating model is trimmed with
+#'   [FLCore::window()] before performance is computed
+#'   ([getOMPerformance()] only).
+#' @param ... Additional arguments forwarded to [mse::performance()]
+#'   ([getOMPerformance()] only).
+#'
+#' @return
+#' \describe{
+#'   \item{[writePerformance()], [setLabelPerformance()]}{Invisibly `TRUE`.}
+#'   \item{[readPerformance()]}{A `data.table` keyed by `om`, `type`, `run`,
+#'     `biol`, `mp`, `statistic`, and `year`, with grouping columns as
+#'     factors and column order fixed as `om`, `type`, `run`, `mp`, `biol`,
+#'     `statistic`, `name`, `desc`, `year`, `iter`, `data`.}
+#'   \item{[summaryPerformance()]}{Invisibly `TRUE` (called for its printed
+#'     side-effect).}
+#'   \item{[labelPerformance()]}{A copy of `dat` with a `label` factor column
+#'     added or replaced; OM-only rows appear first in the factor levels.}
+#'   \item{[periodsPerformance()]}{A `data.table` with one row per grouping
+#'     combination and period, containing `period`, `year` (compact range
+#'     string), `data` (period mean), and the inherited grouping columns.}
+#'   \item{[extractPerformance()]}{A subset of `dat` containing the matched MP
+#'     rows and their corresponding OM baseline rows (`mp == ""`).}
+#'   \item{[getOMPerformance()], [getMSEPerformance()]}{A `data.table` produced
+#'     by row-binding the performance results from all matching files.}
+#' }
+#'
+#' @details
+#' **`writePerformance`**
+#'
+#' Before writing, all columns are coerced to character and then `year` and
+#' `data` are restored to numeric to ensure a consistent serialization format.
+#' Optional columns are normalized: if neither `type` nor `run` is present,
+#' empty character columns for `type`, `run`, and `mp` are added; if `mp` is
+#' absent but `type` and `run` are present, `mp` is constructed by pasting
+#' `om`, `type`, and `run` with `"_"`; if `label` is absent it is set to `mp`
+#' when an MP is present, otherwise to `om`. Column order is standardized to
+#' `om`, `type`, `run`, `mp`, `biol`, `statistic`, `name`, `desc`, `year`,
+#' `iter`, `data` before writing.
+#'
+#' **`readPerformance`**
+#'
+#' Reading is performed with [data.table::fread()] with explicit `colClasses`
+#' to avoid ambiguous type inference (e.g. when `iter` contains non-numeric
+#' labels or `mp` is an empty string). The key set by [data.table::setkey()]
+#' enables efficient subsetting and is assumed by several downstream functions.
+#' The `label` column is optional; when absent it is not created — use
+#' [labelPerformance()] to add it after reading.
+#'
+#' **`periodsPerformance`**
+#'
+#' `periods` is coerced to a list internally. The compact year label uses only
+#' the last two digits of the final year (`2026:2035` → `"2026-35"`). Missing
+#' values in `data` are silently ignored (`na.rm = TRUE`). When `x` contains a
+#' `label` column the grouping includes it; otherwise grouping is by `type`,
+#' `mp`, `statistic`, `name`, `desc`, and `iter`.
+#'
+#' **`extractPerformance`**
+#'
+#' Operating model baseline rows are identified by an empty string in `mp`.
+#' Because matching uses `%like%`, use anchored patterns (e.g. `"^HCR1$"`)
+#' when MP names share substrings. Explicit support for a vector of distinct
+#' MP names is planned.
+#'
+#' **`getOMPerformance`**
+#'
+#' Each `.rds` file is expected to contain a list-like object with an `$om`
+#' component compatible with [FLCore::window()] and [mse::performance()].
+#' Warnings from [mse::performance()] are suppressed with
+#' [base::suppressWarnings()]; re-run individual files interactively if
+#' unexpected results appear.
+#'
+#' **`getMSEPerformance`**
+#'
+#' If a file's deserialized object already inherits from `data.table` it is
+#' returned directly, allowing pre-computed performance summaries to be mixed
+#' with raw MSE objects. `fill = TRUE` in [data.table::rbindlist()] tolerates
+#' minor column-structure differences across files.
+#'
+#' @seealso [mse::performance()], [mse::FLmse-class], [mse::FLmses-class],
+#'   [FLCore::window()], [performanceFLQuants()]
+#'
+#' @examples
+#' \dontrun{
+#' ## writePerformance / readPerformance
+#' writePerformance(perf_dat)
+#' dat <- readPerformance()
+#' dat <- readPerformance("results/performance.dat.gz")
+#'
+#' ## summaryPerformance
+#' summaryPerformance()
+#' summaryPerformance(dat)
+#'
+#' ## labelPerformance
+#' dat <- labelPerformance(dat)
+#' dat <- labelPerformance(dat, labels = "numeric")
+#' dat <- labelPerformance(dat, labels = list(
+#'   hcr01 = "Conservative HCR", hcr02 = "Moderate HCR"))
+#'
+#' ## setLabelPerformance
+#' setLabelPerformance(labels = "numeric")
+#' setLabelPerformance("results/performance.dat.gz",
+#'   labels = list(hcr01 = "Low F", hcr02 = "High F"))
+#'
+#' ## periodsPerformance
+#' res <- periodsPerformance(dat, periods = list(
+#'   short  = 2021:2025,
+#'   medium = 2026:2035,
+#'   long   = 2036:2050))
+#'
+#' ## extractPerformance
+#' sub <- extractPerformance(dat, "HCR1")
+#' sub <- extractPerformance(dat, "^HCR1$")
+#'
+#' ## getOMPerformance
+#' dat <- getOMPerformance("om", fy = 2025)
+#' dat <- getOMPerformance("om", fy = 2025, probs = c(0.1, 0.5, 0.9))
+#'
+#' ## getMSEPerformance
+#' dat <- getMSEPerformance("mse")
+#' dat <- getMSEPerformance("mse", pattern = "scenario_.*\\.rds$")
+#' }
+#'
+#' @author Iago MOSQUEIRA <iago.mosqueira@wur.nl>
+#' @name writePerformance
+#' @keywords file
 
 writePerformance <- function(dat, file="model/performance.dat.gz", overwrite=FALSE) {
 
@@ -79,62 +261,8 @@ writePerformance <- function(dat, file="model/performance.dat.gz", overwrite=FAL
 
 # readPerformance {{{
 
-#' Read a performance table from file
-#'
-#' Reads a performance statistics table previously written by
-#' [writePerformance()], restores column classes, keying, and column order, and
-#' returns the result as a `data.table`.
-#'
-#' This function is the standard reader for performance tables stored on disk,
-#' typically in compressed text format such as `model/performance.dat.gz`.
-#'
-#' @param file A character string giving the path to the performance table file.
-#'   Defaults to `"model/performance.dat.gz"`.
-#'
-#' @return
-#' A `data.table` containing performance statistics. The returned table:
-#' \itemize{
-#'   \item has columns coerced to the expected classes;
-#'   \item is keyed by `om`, `type`, `run`, `biol`, `mp`, `statistic`, and `year`;
-#'   \item has columns ordered as
-#'   `om`, `type`, `run`, `mp`, `biol`, `statistic`, `name`, `desc`, `year`,
-#'   `iter`, `data`;
-#'   \item converts grouping columns such as `om`, `type`, `run`, `mp`, `biol`,
-#'   `statistic`, and `label` to factors when present in the file.
-#' }
-#'
-#' @details
-#' The function uses [data.table::fread()] to import the table and explicitly
-#' sets classes for commonly used columns in performance output:
-#' \itemize{
-#'   \item `type`, `run`, `mp`, and `biol` are read as character;
-#'   \item `year` and `data` are read as numeric;
-#'   \item `iter` is read as character.
-#' }
-#'
-#' After reading, a key is assigned with [data.table::setkey()] to facilitate
-#' fast joins and subsetting. The function also standardizes column order so
-#' downstream utilities can assume a stable structure.
-#'
-#' If a `label` column is present in the file, it is converted to a factor along
-#' with the other categorical columns.
-#'
-#' @seealso [mse::performance()] [writePerformance()], [summaryPerformance()], [labelPerformance()]
-#'
-#' @examples
-#' \dontrun{
-#' # Read the default performance table
-#' dat <- readPerformance()
-#'
-#' # Read from a specific file
-#' dat <- readPerformance("results/performance.dat.gz")
-#'
-#' # Inspect the structure
-#' str(dat)
-#' key(dat)
-#' }
-#'
-#' @author Iago Mosqueira, WMR
+#' @describeIn writePerformance Read a performance statistics table from disk,
+#'   restoring column classes, data.table key, column order, and factor levels.
 #' @keywords file
 
 readPerformance <- function(file="model/performance.dat.gz") {
@@ -163,71 +291,9 @@ readPerformance <- function(file="model/performance.dat.gz") {
 
 # summaryPerformance {{{
 
-#' Summarize a performance table
-#'
-#' Produces a compact summary of a performance statistics table, either from a
-#' file on disk or from an already loaded `data.table`.
-#'
-#' The function reports the number of operating models (`om`), management
-#' procedure types (`type`), and management procedures (`mp`), and computes a
-#' grouped summary by `om`, `type`, and `run`.
-#'
-#' @param file Either:
-#' \itemize{
-#'   \item a character string giving the path to a performance table file, or
-#'   \item a `data.table` already containing performance statistics.
-#' }
-#' Defaults to `"model/performance.dat.gz"`.
-#'
-#' @return
-#' Invisibly returns `TRUE`. The main effect of the function is to print a brief
-#' summary to the console.
-#'
-#' @details
-#' If `file` is not a `data.table`, it is first read with [readPerformance()].
-#'
-#' The grouped summary computes, for each combination of `om`, `type`, and
-#' `run`:
-#' \itemize{
-#'   \item `years`: the minimum and maximum years pasted as a range;
-#'   \item `frq`: the spacing between the first two unique years, intended as an
-#'     indication of temporal frequency;
-#'   \item `iter`: the number of unique iterations.
-#' }
-#'
-#' A second summary counts the number of unique values in `om`, `type`, and
-#' `mp`, and prints them as a one-line overview.
-#'
-#' The per-group summary object is created internally but not currently printed,
-#' except for the one-line counts written with [base::cat()]. The commented code
-#' in the function suggests this output may later be extended to print a tree or
-#' tabular summary.
-#'
-#' @section Current behavior and caveats:
-#' \itemize{
-#'   \item The function is primarily intended for quick console inspection.
-#'   \item The `frq` calculation assumes at least two unique years are present
-#'     within each group; otherwise it may return `numeric(0)` or `NA`.
-#'   \item The grouped summary is not currently returned, only computed
-#'     internally.
-#' }
-#'
-#' @seealso [readPerformance()], [writePerformance()]
-#'
-#' @examples
-#' \dontrun{
-#' # Summarize from default file
-#' summaryPerformance()
-#'
-#' # Summarize from a specific file
-#' summaryPerformance("results/performance.dat.gz")
-#'
-#' # Summarize an object already in memory
-#' dat <- readPerformance("results/performance.dat.gz")
-#' summaryPerformance(dat)
-#' }
-#'
-#' @author Iago Mosqueira, WMR
+#' @describeIn writePerformance Print a compact console summary of the number
+#'   of operating models, MP types, and management procedures, together with
+#'   per-group year ranges and iteration counts.
 #' @keywords utilities
 
 summaryPerformance <- function(file="model/performance.dat.gz") {
@@ -266,23 +332,10 @@ summaryPerformance <- function(file="model/performance.dat.gz") {
 
 # labelPerformance {{{
 
-#' @title labelPerformance
-#' @description Creates a label column in a performance table
-#' @param dat A performance statistics table, as returned by performance()
-#' @param labels Labels to be inserted, as vector or data.frame/data.table
-#' @return A labelled performance statistics data.table
-#' @details
-#' - 'numeric'
-#' - vector
-#' - data.frame or data.table
-#' - NULL
-#' @examples
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
-#' @rdname performance
+#' @describeIn writePerformance Add or replace the \code{label} factor column
+#'   in a performance statistics table; OM-only rows appear first in the factor
+#'   levels.
+#' @keywords manip
 
 labelPerformance <- function(dat, labels=NULL) {
 
@@ -340,18 +393,11 @@ labelPerformance <- function(dat, labels=NULL) {
 
 # setLabelPerformance {{{
 
-#' @title setLabelPerofrmance
-#' @description FUNCTION_DESCRIPTION
-#' @param file File where performance table is stored, default: 'model/performance.dat.gz'
-#' @return Invisible updates the table in file
-#' @details DETAILS
-#' @examples
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
-#' @rdname labelPerformance
+#' @describeIn writePerformance Convenience wrapper that reads a stored
+#'   performance table, updates its \code{label} column via
+#'   [labelPerformance()], and writes the result back, replacing the previous
+#'   contents.
+#' @keywords file
 
 setLabelPerformance <- function(file="model/performance.dat.gz", labels) {
 
@@ -365,78 +411,10 @@ setLabelPerformance <- function(file="model/performance.dat.gz", labels) {
 
 # periodsPerformance {{{
 
-#' Aggregate performance statistics by period
-#'
-#' Computes mean performance values over user-defined periods and returns a
-#' summarized performance table.
-#'
-#' This function is useful for collapsing annual performance time series into
-#' broader periods, such as short-, medium-, and long-term intervals, while
-#' preserving the main grouping structure of the original performance table.
-#'
-#' @param x A `data.table` containing performance statistics. It must include at
-#'   least the columns `year`, `data`, `type`, `mp`, `statistic`, `name`,
-#'   `desc`, and `iter`. If a `label` column is present, it is retained in the
-#'   grouping structure.
-#' @param periods A vector or list defining the periods over which means should
-#'   be computed. Each element should contain the years belonging to one period.
-#'   Named elements are used as period labels; unnamed elements are labelled
-#'   automatically from the year range.
-#'
-#' @return
-#' A `data.table` with one row per grouping combination and period, containing:
-#' \itemize{
-#'   \item the grouping variables inherited from `x`;
-#'   \item `period`, the name of the period;
-#'   \item `year`, a compact character representation of the year span;
-#'   \item `data`, the mean of `data` over the years in that period.
-#' }
-#'
-#' @details
-#' The `periods` argument is coerced to a list. For each period:
-#' \itemize{
-#'   \item if the element has length greater than one, the display label in the
-#'     output `year` column is built as `"start-end"`, where `end` uses the last
-#'     two digits of the final year;
-#'   \item if the element has length one, that year is used directly.
-#' }
-#'
-#' If period names are missing, they are replaced by the derived year labels.
-#'
-#' Means are computed with `na.rm=TRUE`, so missing values in `data` are ignored.
-#'
-#' When `x` contains a `label` column, aggregation is done by:
-#' `type`, `mp`, `label`, `statistic`, `name`, `desc`, and `iter`.
-#'
-#' Otherwise aggregation is done by:
-#' `type`, `mp`, `statistic`, `name`, `desc`, and `iter`.
-#'
-#' @section Output structure:
-#' The resulting table is intended to remain compatible with downstream plotting
-#' or reporting workflows based on summarized performance indicators.
-#'
-#' @seealso [labelPerformance()], [summaryPerformance()]
-#'
-#' @examples
-#' \dontrun{
-#' dat <- readPerformance()
-#'
-#' # Define named periods
-#' per <- list(
-#'   short = 2021:2025,
-#'   medium = 2026:2035,
-#'   long = 2036:2050
-#' )
-#'
-#' res <- periodsPerformance(dat, per)
-#'
-#' # Unnamed periods will be labelled automatically
-#' res2 <- periodsPerformance(dat, list(2021:2025, 2026:2030))
-#' }
-#'
-#' @author Iago Mosqueira, WMR
+#' @describeIn writePerformance Collapse annual performance statistics into
+#'   broader user-defined periods by computing the mean of \code{data} over
+#'   the years belonging to each period.
 #' @keywords manip
-#' @export
 
 periodsPerformance <- function(x, periods) {
 
@@ -473,68 +451,10 @@ periodsPerformance <- function(x, periods) {
 
 # extractPerformance {{{
 
-#' Extract performance data for one or more management procedures
-#'
-#' Subsets a performance table to return the time series corresponding to one or
-#' more management procedures (`mp`) together with the associated historical
-#' operating model (`om`) rows.
-#'
-#' This is useful when comparing the performance of a selected management
-#' procedure against its corresponding operating model baseline.
-#'
-#' @param dat A performance statistics `data.table` containing at least the
-#'   columns `om` and `mp`.
-#' @param mp A character string used to match management procedures. Matching is
-#'   performed with `%like%`, so partial strings or patterns can be used.
-#'
-#' @return
-#' A subset of `dat` containing:
-#' \itemize{
-#'   \item rows for management procedures whose `mp` matches the supplied
-#'     pattern; and
-#'   \item rows for the corresponding operating model(s), identified as rows
-#'     where `om` matches the selected subset and `mp` is empty (`""`).
-#' }
-#'
-#' @details
-#' The function first identifies all rows whose `mp` matches the supplied
-#' pattern using [data.table::like()] syntax via `%like%`. From this subset, it
-#' extracts the unique matching management procedures and associated operating
-#' models. It then returns all rows in the original table that belong either to:
-#' \itemize{
-#'   \item one of the matched management procedures, or
-#'   \item the corresponding operating model baseline rows.
-#' }
-#'
-#' This design makes it easy to compare projected management procedure
-#' trajectories against the historical or reference operating model records.
-#'
-#' @section Current limitations:
-#' \itemize{
-#'   \item The function contains a TODO note indicating future support for
-#'     parsing multiple management procedure inputs more explicitly.
-#'   \item Matching is pattern-based rather than exact, so care should be taken
-#'     when `mp` names overlap.
-#'   \item The function assumes baseline operating model rows are identified by
-#'     an empty string in the `mp` column.
-#' }
-#'
-#' @seealso [labelPerformance()], [periodsPerformance()]
-#'
-#' @examples
-#' \dontrun{
-#' dat <- readPerformance()
-#'
-#' # Extract rows for one MP pattern and its corresponding OM
-#' sub <- extractPerformance(dat, "HCR1")
-#'
-#' # Because matching uses %like%, partial patterns can be used
-#' sub2 <- extractPerformance(dat, "MP")
-#' }
-#'
-#' @author Iago Mosqueira, WMR
+#' @describeIn writePerformance Subset a performance table to the rows
+#'   belonging to management procedures matching a pattern, together with their
+#'   corresponding OM baseline rows (\code{mp == ""}).
 #' @keywords manip
-#' @export
 
 extractPerformance <- function(dat, mp) {
 
@@ -555,124 +475,26 @@ extractPerformance <- function(dat, mp) {
 }
 # }}}
 
-# getPerformance {{{
+# getOMPerformance {{{
 
-#' Build a performance table from operating model files
-#'
-#' Reads a set of serialized operating model objects from disk, computes
-#' performance statistics for each, and combines the results into a single
-#' `data.table`.
-#'
-#' @param path A character string giving the directory containing serialized
-#'   operating model files.
-#' @param pattern A character string giving the file pattern used by
-#'   [base::list.files()] to identify files to read. Defaults to `"*.rds"`.
-#' @param fy The final year to retain when windowing each operating model before
-#'   computing performance. Passed to [window()].
-#' @param ... Additional arguments passed to [performance()].
-#'
-#' @return
-#' A `data.table` containing the row-bound performance statistics for all files
-#' found in `path` matching `pattern`. An `om` column is added using the file
-#' name with the `.rds` extension removed.
-#'
-#' @details
-#' For each file found:
-#' \enumerate{
-#'   \item the object is read using [readRDS()];
-#'   \item the `$om` component is extracted;
-#'   \item the object is trimmed to `fy` using [window()];
-#'   \item [performance()] is called on the resulting object;
-#'   \item an `om` column is added from the file basename.
-#' }
-#'
-#' The results are combined using [data.table::rbindlist()].
-#'
-#' Warnings generated while computing performance are suppressed using
-#' [base::suppressWarnings()], which can be useful in batch processing but may
-#' hide potentially important diagnostics.
-#'
-#' @section Assumptions:
-#' \itemize{
-#'   \item Each `.rds` file contains an object with an `$om` component.
-#'   \item That component is compatible with [window()] and [performance()].
-#'   \item File names uniquely identify the operating model and can be used as
-#'     the `om` label.
-#' }
-#'
-#' @seealso [getMSEPerformance()], [writePerformance()], [performance()]
-#'
-#' @examples
-#' \dontrun{
-#' # Build a performance table from OM files in a directory
-#' dat <- getOMPerformance("om", fy = 2025)
-#'
-#' # Pass additional arguments on to performance()
-#' dat <- getOMPerformance("om", fy = 2025, probs = c(0.1, 0.5, 0.9))
-#' }
-#'
-#' @author Iago Mosqueira, WMR
+#' @describeIn writePerformance Batch-read serialized OM files, trim each to
+#'   \code{fy} with [FLCore::window()], compute [mse::performance()], and
+#'   row-bind the results into a single table.
 #' @keywords file
-#' @export
 
 getOMPerformance <- function(path, pattern="*.rds", fy, ...) {
   return(rbindlist(lapply(list.files(path, pattern, full.names=TRUE), function(i)
     suppressWarnings(performance(window(readRDS(i)$om, end=fy), ...)[,
       om:=sub('.rds', '', basename(i))])[])))
 }
+# }}}
 
-#' Build a performance table from MSE result files
-#'
-#' Reads a set of serialized MSE result files from disk and combines their
-#' performance statistics into a single `data.table`.
-#'
-#' @param path A character string giving the directory containing serialized MSE
-#'   result files.
-#' @param pattern A character string giving the file pattern used by
-#'   [base::list.files()] to identify files to read. Defaults to `"*.rds"`.
-#'
-#' @return
-#' A `data.table` created by row-binding performance results from all matching
-#' files.
-#'
-#' @details
-#' For each file found in `path` matching `pattern`, the object is read using
-#' [readRDS()]. Then:
-#' \itemize{
-#'   \item if the object already inherits from `data.table`, it is returned as-is;
-#'   \item otherwise, [performance()] is called on the object to derive the
-#'     performance table.
-#' }
-#'
-#' All resulting tables are combined with [data.table::rbindlist()] using
-#' `fill=TRUE`, so files with slightly different column structures can still be
-#' merged.
-#'
-#' This function is intended as a convenient batch importer for previously saved
-#' MSE outputs or already extracted performance tables.
-#'
-#' @section Typical use cases:
-#' \itemize{
-#'   \item combining performance output from multiple management procedures;
-#'   \item importing a mixture of saved raw MSE objects and precomputed
-#'     `data.table` performance summaries;
-#'   \item preparing inputs for [writePerformance()] or downstream summaries.
-#' }
-#'
-#' @seealso [getOMPerformance()], [readPerformance()], [writePerformance()]
-#'
-#' @examples
-#' \dontrun{
-#' # Read and combine performance tables from a folder of MSE results
-#' dat <- getMSEPerformance("mse")
-#'
-#' # Use a custom file pattern
-#' dat <- getMSEPerformance("mse", pattern = "scenario_.*\\.rds$")
-#' }
-#'
-#' @author Iago Mosqueira, WMR
+# getMSEPerformance {{{
+
+#' @describeIn writePerformance Batch-read serialized MSE result files or
+#'   pre-computed performance \code{data.table} files and row-bind them into a
+#'   single table.
 #' @keywords file
-#' @export
 
 getMSEPerformance <- function(path, pattern="*.rds") {
   return(rbindlist(lapply(list.files(path, pattern, full.names=TRUE), function(i) {
@@ -688,48 +510,71 @@ getMSEPerformance <- function(path, pattern="*.rds") {
 
 # performanceFLQuants {{{
 
-#' Convert Performance Data to FLQuant Format
+#' Convert a performance statistics table to FLQuant objects
 #'
-#' Transforms performance metrics from `FLmse` or `FLmsea` objects, stored as a
-#' data.table into an `FLQuant` pr `FLQuants` object.
+#' Transforms a performance statistics `data.table`, or an `FLmse`/`FLmses`
+#' object, into one or more [FLCore::FLQuant-class] objects organized by
+#' management procedure, with statistics in the first (`quant`) dimension and
+#' iterations preserved in the `iter` dimension.
 #'
-#' @param x An object of class `FLmse`, `FLmses`, or a `data.table`.
+#' `performanceFLQuants()` always returns a named list (one `FLQuant` per MP).
+#' `performanceFLQuant()` is a convenience wrapper that unwraps the list when
+#' only one MP is present.
+#'
+#' @param x An object of class [mse::FLmse-class], [mse::FLmses-class], or a
+#'   `data.table`. When `x` is an `FLmse` or `FLmses`, the performance slot is
+#'   extracted automatically via [mse::performance()]. When `x` is a
+#'   `data.table`, it must contain at least the columns `statistic`, `year`,
+#'   `iter`, `data`, and `mp`. An optional `biol` column — present in outputs
+#'   from [mse::mp()] on `FLombf` operating models — is mapped to the `unit`
+#'   dimension of the resulting [FLCore::FLQuant-class].
 #'
 #' @return
-#'   If a single management procedure (mp) is present, returns a single `FLQuant`
-#'   object. If multiple management procedures are present, returns a list of
-#'   `FLQuant` objects, one per mp. When `biol` column is present, it is renamed
-#'   to `unit` in the resulting `FLQuant` or `FLQuants`.
+#' \describe{
+#'   \item{`performanceFLQuants()`}{A named list of [FLCore::FLQuant-class]
+#'     objects, one per unique `mp` value. The first (`quant`) dimension is
+#'     named by `statistic`; `year` and `iter` dimensions correspond to
+#'     simulation years and iterations. When a `biol` column is present its
+#'     values populate the `unit` dimension.}
+#'   \item{`performanceFLQuant()`}{If the list contains exactly one element,
+#'     that [FLCore::FLQuant-class] is returned directly; otherwise the full
+#'     named list is returned.}
+#' }
 #'
 #' @details
-#'   If `x` is of class `FLmse` or `FLmses`, the performance slot is extracted
-#'   automatically. The data.table must contain columns: `statistic`, `year`, `iter`,
-#'   `data`, and `mp`. Optionally, a `biol` column can be present, as in the
-#'   performance table obtained from callin `mp()` on an `FLombf` OM. Values for each 
-#'   `biol` will be separated using the 'unit' dimension.
+#' Conversion from `data.table` to `FLQuant` is delegated to
+#' [FLCore::as.FLQuant()], which expects the columns to map unambiguously onto
+#' the standard FLQuant dimensions. The `statistic` column populates the
+#' `quant` dimension and must therefore contain values meaningful as dimension
+#' names.
 #'
-#'   The first (`quant`) dimension of the `FLQuant` or `FLQuants` contain the
-#'    statistics, named as in the `statistic` column of the performance table.
-#'    
-#'    When results from multiple management procedures are present, the output is an
-#'   `FLQuants` list of `FLQuant` objects, one per mp.
+#' When a `biol` column is present, [data.table::setnames()] renames it to
+#' `unit` before passing to [FLCore::as.FLQuant()], leaving the original table
+#' unmodified.
+#'
+#' An informative error is raised if `x` is a `data.table` that does not
+#' contain all required columns (`statistic`, `year`, `iter`, `data`, `mp`).
+#'
+#' @seealso [mse::performance()], [mse::FLmse-class], [mse::FLmses-class],
+#'   [FLCore::FLQuant-class], [FLCore::as.FLQuant()], [readPerformance()],
+#'   [writePerformance()]
 #'
 #' @examples
 #' \dontrun{
-#'   # Using a data.table directly
-#'   perf_dt <- data.table(
-#'     statistic = rep("SSB", 4),
-#'     year = rep(2025:2026, 2),
-#'     iter = rep(1:2, each = 2),
-#'     data = runif(4, 1000, 3000),
-#'     mp = "MP1"
-#'   )
-#'   quant <- performanceFLQuant(perf_dt)
-#'   quants <- performanceFLQuants(perf_dt)
+#' # From an FLmse object
+#' flqs <- performanceFLQuants(mse_run)
+#'
+#' # From a pre-read data.table (multiple MPs)
+#' dat <- readPerformance()
+#' flqs <- performanceFLQuants(dat)
+#' flqs[["MP1"]]["SSB", , , , ,]
+#'
+#' # Convenience wrapper — returns FLQuant directly for a single MP
+#' flq <- performanceFLQuant(dat)
 #' }
 #'
-#' @seealso [mse::performance()], [mse::FLmse-class], [mse::FLmses-class]
-#'
+#' @author Iago MOSQUEIRA <iago.mosqueira@wur.nl>
+#' @name performanceFLQuants
 #' @keywords manip
 
 performanceFLQuant <- function(x) {
@@ -743,7 +588,9 @@ performanceFLQuant <- function(x) {
   }
 }
 
-#' @rdname performanceFLQuant
+#' @describeIn performanceFLQuants Convenience wrapper returning a single
+#'   [FLCore::FLQuant-class] directly when only one management procedure is
+#'   present, or the full named list otherwise.
 
 performanceFLQuants <- function(x) {
 

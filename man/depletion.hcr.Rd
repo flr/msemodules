@@ -159,7 +159,7 @@ at assessment year resolution.
 }
 
 \seealso{
-\code{\link[=buffer.hcr]{buffer.hcr()}}, \code{\link[mse:selectMetric]{mse::selectMetric()}}, \code{\link[FLasher:fwdControl]{FLasher::fwdControl()}}, \code{\link[=track]{track()}}
+\code{\link[=buffer.hcr]{buffer.hcr()}}, \code{\link[mse:selectMetric]{mse::selectMetric()}}, \code{\link[FLasher:fwdControl]{FLasher::fwdControl()}},
 }
 \author{
 Iago Mosqueira, WMR

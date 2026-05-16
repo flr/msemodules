@@ -41,7 +41,7 @@ needed by \code{\link[FLCore:spread]{FLCore::spread()}}. In particular, this fun
 such as \code{dy}, \code{y0}, \code{ay}, and \code{stock} become available after calling
 \code{spread(args)}.}
 
-\item{tracking}{A tracking object updated in-place through \code{\link[=track]{track()}} to record
+\item{tracking}{A tracking object updated in-place through  to record
 convergence of the shortcut assessment.}
 
 \item{...}{Additional arguments passed to the metric function named in

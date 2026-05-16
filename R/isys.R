@@ -11,56 +11,95 @@ globalVariables(c("metric"))
 
 # bank_borrow.is {{{
 
-#' bank_borrow.isys
+#' Banking and borrowing implementation system method
 #'
-#' Banking and Borrowing Mechanism for TAC Adjustment
+#' Adjusts a TAC recommendation from an HCR by banking a proportion of any
+#' increase or borrowing against a future quota when a decrease is large,
+#' smoothing inter-annual TAC variability while respecting stock health
+#' conditions.
 #'
-#' @param stk `FLStock` object representing the stock dat.
-#' @param ctrl `fwdControl` object for forward projection controls.
-#' @param args List of additional arguments required for the execution.
-#' @param split Optional. Input for splitting controls (default is `NULL`).
-#' @param rate Numeric. Proportion rate for borrowing and banking adjustments (default is `NULL`).
-#' @param diff Numeric. Tolerance difference for determining borrowing or banking actions (default is 0.15).
-#' @param healthy Numeric. Threshold for determining stock health (default is 3).
-#' @param tracking Data structure. Object to track borrowing and banking values over time.
+#' @param stk An [FLCore::FLStock-class] object representing the stock.
+#' @param ctrl An [FLasher::fwdControl-class] object carrying the TAC
+#'   recommendation to be adjusted.
+#' @param args A list of management-cycle dimensionality arguments supplied
+#'   automatically by [mse::mp()]. Must contain at least `iy`, `ay`, `frq`,
+#'   and `management_lag`.
+#' @param split Optional split-control input. Currently unused; reserved for
+#'   future support of multiple [mse::mseCtrl-class] objects within a single
+#'   `isys` step. Defaults to `NULL`.
+#' @param rate Numeric in \eqn{[0, 1]}. Proportion of the TAC to bank or
+#'   borrow when the threshold condition is met. Must be supplied; there is no
+#'   default.
+#' @param diff Numeric. Minimum relative change in TAC (compared to the
+#'   previous HCR decision `pre`) required to trigger a banking or borrowing
+#'   action. Defaults to `0.15`, i.e. a 15% change.
+#' @param healthy Numeric. Minimum value of the `rule.hcr` tracking metric
+#'   required for the stock to be considered healthy enough for banking or
+#'   borrowing to be applied. Defaults to `1`.
+#' @param tracking An [FLCore::FLQuant-class] used to record intermediate
+#'   values and decisions during MP evaluation, passed through and updated by
+#'   [mse::mp()].
 #'
-#' @return A list containing:
-#' \item{ctrl}{Modified `fwdControl` object with updated TAC values.}
-#' \item{tracking}{Updated tracking data structure with recorded borrowing and banking amounts.}
+#' @return A list with two elements:
+#' \describe{
+#'   \item{`ctrl`}{The input [FLasher::fwdControl-class] object with the
+#'     adjusted TAC stored in `ctrl$value`.}
+#'   \item{`tracking`}{The updated tracking object, with `borrowing.isys` and
+#'     `banking.isys` metrics written for the assessment year `ay`.}
+#' }
 #'
 #' @details
-#' The function performs the following:
-#' - Checks if management assumes annual (frq = 1). Raises an error if not.
-#' - Retrieves and adjusts TAC for previous banking and borrowing actions.
-#' - Verifies the stock's health status (`healthy`) using tracking data to determine eligibility for banking/borrowing.
-#' - Calculates borrowing if TAC is significantly lower than the reference (`pre`) and banking if TAC is significantly higher.
-#' - Updates the `ctrl` and `tracking` objects with the adjusted TAC and banking/borrowing amounts.
+#' In the initial year (`ay == iy`) the tracking metrics `borrowing.isys` and
+#' `banking.isys` are initialized to zero and the reference TAC (`pre`) is set
+#' to the realized catch in the year preceding the management lag.
 #'
-#' @note
-#' Banking and borrowing adjustments are applied only when the frequency (`frq`) is equal to 1.
-#' @seealso
+#' In subsequent years `pre` is taken from the `hcr` tracking metric for the
+#' current year, and the TAC carried in `ctrl` is first corrected for any
+#' amount borrowed or banked in the previous cycle before new banking/borrowing
+#' is evaluated.
+#'
+#' Banking and borrowing are triggered as follows:
+#' \itemize{
+#'   \item **Borrowing**: if the (corrected) TAC falls more than `diff` below
+#'     `pre` \emph{and} the stock is healthy, `rate * tac` is added to the
+#'     current TAC and recorded in `borrowing.isys`.
+#'   \item **Banking**: if the (corrected) TAC rises more than `diff` above
+#'     `pre` \emph{and} the stock is healthy, `rate * tac` is subtracted from
+#'     the current TAC and recorded in `banking.isys`.
+#' }
+#'
+#' Only annual management cycles (`frq == 1`) are currently supported; a
+#' non-annual `frq` raises an error.
+#'
+#' @seealso [mse::mp()], [mse::mpCtrl()], [mse::mseCtrl()]
 #'
 #' @examples
-#' # Example dataset
+#' \dontrun{
 #' data(sol274)
-#' 
-#' # Sets up an mpCtrl using hockeystick(catch~ssb) + bank_borrow(10%)
-#' ctrl <- mpCtrl(est = mseCtrl(method=perfect.sa),
-#'   hcr = mseCtrl(method=hockeystick.hcr, args=list(metric="ssb", trigger=42000, 
-#'     output="catch", target=11000)),
-#'   isys = mseCtrl(method=bank_borrow.is, args=list(rate=0.10, healthy=2, diff=0.05)))
-#' 
-#' # Runs the MP
-#' run <- mp(om, control=ctrl, args=list(iy=2021, fy=2035))
-#' 
-#' # Plot time series
-#' plot(om, list(BaB=run))
-#' 
-#' # Observe from tracking the TAC-setting steps
+#'
+#' # mpCtrl combining a hockey-stick HCR with 10% banking/borrowing
+#' ctrl <- mpCtrl(
+#'   est   = mseCtrl(method = perfect.sa),
+#'   hcr   = mseCtrl(method = hockeystick.hcr,
+#'             args = list(metric = "ssb", trigger = 42000,
+#'                         output = "catch", target = 11000)),
+#'   isys  = mseCtrl(method = bank_borrow.is,
+#'             args = list(rate = 0.10, healthy = 2, diff = 0.05)))
+#'
+#' run <- mp(om, control = ctrl, args = list(iy = 2021, fy = 2035))
+#'
+#' plot(om, list(BaB = run))
+#'
+#' # Inspect the TAC-setting steps from the tracking object
 #' items <- c("year", "hcr", "banking.isys", "borrowing.isys", "isys", "fwd")
-#' 
-#' dcast(tracking(run)[metric %in% items[-1], .(data=mean(data)), by=.(year, metric)],
-#'   year~metric, value.var='data')[, ..items]
+#' dcast(
+#'   tracking(run)[metric %in% items[-1],
+#'     .(data = mean(data)), by = .(year, metric)],
+#'   year ~ metric, value.var = "data")[, ..items]
+#' }
+#'
+#' @author Iago MOSQUEIRA <iago.mosqueira@wur.nl>
+#' @keywords manip
 
 bank_borrow.is <- function(stk, ctrl, args, split=NULL, rate = NULL, diff = 0.15,
   healthy=1, tracking) {
@@ -127,54 +166,79 @@ bank_borrow.is <- function(stk, ctrl, args, split=NULL, rate = NULL, diff = 0.15
 
 # effort.is {{{
 
-#' Calculate Effort Multiplier for Harvest Control Rules
+#' Effort-multiplier implementation system method
 #'
-#' Converts a harvest control rule (HCR) fihsing mortality target into a multiplier
-#' relative to a (dynamic) reference fishing mortality level.
+#' Converts a fishing-mortality target set by an HCR into a relative effort
+#' multiplier by scaling against a reference fishing mortality computed from
+#' recent years. Passing a relative effort target to [FLasher::fwd()] rather
+#' than an absolute F smooths the response to inter-annual variability in
+#' fleet dynamics.
 #'
-#' @param stk An FLStock object containing stock information
-#' @param ctrl A fwdControl object setting an F or effort target.
-#' @param Fref Numeric or FLQuant. Reference fishing mortality for scaling. Defaults to
-#'   the mean of fbar over the specified years.
-#' @param nyears Integer. Number of years to use for calculating mean Fref.
-#'   Default is taken from `args$nsqy`
-#' @param args A list containing dimensionality arguments, passed on by mp().
-#' @param tracking An FLQuant used for tracking indicators, intermediate values, and decisions during MP evaluation.
+#' @param stk An [FLCore::FLStock-class] object containing stock and fishery
+#'   information.
+#' @param ctrl An [FLasher::fwdControl-class] object whose `quant` slot must be
+#'   one of `"f"`, `"fbar"`, or `"effort"` and whose `value` slot carries the
+#'   absolute F target from the HCR.
+#' @param nyears Integer. Number of years over which the mean reference fishing
+#'   mortality is calculated. Defaults to `args$nsqy` as supplied by
+#'   [mse::mp()].
+#' @param Fref Numeric or [FLCore::FLQuant-class]. Reference fishing mortality
+#'   used as the denominator when computing the multiplier. Defaults to the
+#'   mean of [FLCore::fbar()] over the `nyears` years ending at `dy` (the
+#'   final data year).
+#' @param args A list of management-cycle dimensionality arguments supplied
+#'   automatically by [mse::mp()], including at least `dy` and `nsqy`.
+#' @param tracking An [FLCore::FLQuant-class] used to record intermediate
+#'   values and decisions during MP evaluation, passed through unchanged by
+#'   this method.
 #'
-#' @return A list containing:
-#'   \describe{
-#'     \item{ctrl}{Updated control list with effort multiplier in `value` 
-#'       and adjusted years in `rel.year`}
-#'     \item{tracking}{Updated tracking object}
-#'   }
+#' @return A list with two elements:
+#' \describe{
+#'   \item{`ctrl`}{The input [FLasher::fwdControl-class] object with `value`
+#'     replaced by the dimensionless effort multiplier and `relYear` set to
+#'     `ctrl$year - data_lag` so that [FLasher::fwd()] interprets the target
+#'     relative to the correct historical year.}
+#'   \item{`tracking`}{The tracking object, returned unchanged.}
+#' }
 #'
 #' @details
-#' The function calculates the effort multiplier as:
-#' \deqn{mult = \frac{target}{Fref}}{mult = target / Fref}
+#' The effort multiplier is defined as
+#' \deqn{m = \frac{Ftarget}{F_ref}}{mult = target / Fref}
+#' where \eqn{F_target} is the value in `ctrl$value` as set by the
+#' HCR and \eqn{F_ref} is the mean [FLCore::fbar()] over the most
+#' recent `nyears` years of data.
 #'
-#' @note
-#' The `ctrl$quant` parameter must be one of "f", "fbar", or "effort".
-#' Other values will cause the function to stop with an error.
+#' Setting `ctrl$relYear` tells [FLasher::fwd()] to express the effort target
+#' relative to the effort observed in that reference year, effectively turning
+#' the absolute F recommendation into a proportional change instruction.
+#'
+#' An error is raised immediately if `ctrl$quant` is not one of `"f"`,
+#' `"fbar"`, or `"effort"`.
+#'
+#' @seealso [mse::mp()], [mse::split.is()], [mse::mpCtrl()], [mse::mseCtrl()],
+#'   [FLCore::fbar()]
 #'
 #' @examples
-#' # Example dataset
+#' \dontrun{
 #' data(plesim)
-#' 
-#' # Sets up an mpCtrl using hockeystick(fbar~ssb)
+#'
+#' # mpCtrl combining a hockey-stick HCR (F target) with effort.is
 #' ctrl <- mpCtrl(
-#'   est = mseCtrl(method=perfect.sa),
-#'   hcr = mseCtrl(method=hockeystick.hcr, args=list(metric="ssb", trigger=45000, 
-#'     output="fbar", target=0.27)),
-#'   isys = mseCtrl(method=effort.is, args=list(nyears=3)))
-#' 
-#' # Runs mp between 2021 and 2035
-#' run <- mp(om, control=ctrl, args=list(iy=2021, fy=2035))
-#' 
-#' # Runs mp without effort.is 'nyears' buffer effect
-#' run_nois <- mp(om, control=ctrl[-3], args=list(iy=2021, fy=2035))
-#' 
-#' # Plots results
-#' plot(om, effort.is=run, no_is=run_nois)
+#'   est  = mseCtrl(method = perfect.sa),
+#'   hcr  = mseCtrl(method = hockeystick.hcr,
+#'            args = list(metric = "ssb", trigger = 45000,
+#'                        output = "fbar", target = 0.27)),
+#'   isys = mseCtrl(method = effort.is, args = list(nyears = 3)))
+#'
+#' run      <- mp(om, control = ctrl,      args = list(iy = 2021, fy = 2035))
+#' run_nois <- mp(om, control = ctrl[-3],  args = list(iy = 2021, fy = 2035))
+#'
+#' # Compare with and without the effort.is buffer effect
+#' plot(om, effort.is = run, no_is = run_nois)
+#' }
+#'
+#' @author Iago MOSQUEIRA <iago.mosqueira@wur.nl>
+#' @keywords manip
 
 effort.is <- function(stk, ctrl, nyears=args$nsqy, 
   Fref=yearMeans(fbar(stk)[, ac(seq(dy - nyears + 1, dy))]), 

@@ -523,7 +523,7 @@ buffer_bands <- function(x) {
 #'   \item Missing outputs are silently converted to zero.
 #' }
 #'
-#' @seealso [buffer.hcr()], [selectMetric()], [fwdControl()], [track()]
+#' @seealso [buffer.hcr()], [selectMetric()], [fwdControl()], [mse::`track()<-`]
 #'
 #' @author Iago Mosqueira, WMR
 #' @keywords models

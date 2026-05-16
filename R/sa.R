@@ -41,7 +41,7 @@ globalVariables(c("y0", "dy"))
 #'   needed by [spread()]. In particular, this function assumes that variables
 #'   such as `dy`, `y0`, `ay`, and `stock` become available after calling
 #'   `spread(args)`.
-#' @param tracking A tracking object updated in-place through [track()] to record
+#' @param tracking A tracking object updated in-place through [mse::`track()<-`] to record
 #'   convergence of the shortcut assessment.
 #' @param ... Additional arguments passed to the metric function named in
 #'   `metric`.

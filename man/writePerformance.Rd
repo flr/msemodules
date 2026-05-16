@@ -2,22 +2,270 @@
 % Please edit documentation in R/performance.R
 \name{writePerformance}
 \alias{writePerformance}
-\title{Write performance table to file}
+\alias{readPerformance}
+\alias{summaryPerformance}
+\alias{labelPerformance}
+\alias{setLabelPerformance}
+\alias{periodsPerformance}
+\alias{extractPerformance}
+\alias{getOMPerformance}
+\alias{getMSEPerformance}
+\title{Read and write performance statistics tables}
 \usage{
 writePerformance(dat, file = "model/performance.dat.gz", overwrite = FALSE)
+
+readPerformance(file = "model/performance.dat.gz")
+
+summaryPerformance(file = "model/performance.dat.gz")
+
+labelPerformance(dat, labels = NULL)
+
+setLabelPerformance(file = "model/performance.dat.gz", labels)
+
+periodsPerformance(x, periods)
+
+extractPerformance(dat, mp)
+
+getOMPerformance(path, pattern = "*.rds", fy, ...)
+
+getMSEPerformance(path, pattern = "*.rds")
 }
 \arguments{
-\item{dat}{data.table with performance statistics.}
+\item{dat}{A \code{data.table} containing performance statistics, as returned by
+\code{\link[mse:performance]{mse::performance()}}, or an object of class \code{FLmse} or \code{FLmses} from
+which performance statistics can be extracted automatically.}
 
-\item{file}{file to write to, defaults to 'model/performance.dat.gz' a compressed text file.}
+\item{file}{A character string giving the path to the performance table
+file. Defaults to \code{"model/performance.dat.gz"}. The \code{.gz} extension
+causes \code{\link[data.table:fwrite]{data.table::fwrite()}} / \code{\link[data.table:fread]{data.table::fread()}} to use gzip
+compression transparently.}
+
+\item{overwrite}{Logical. If \code{TRUE}, any existing file at \code{file} is
+overwritten entirely. If \code{FALSE} (default), existing rows not conflicting
+with \code{dat} are preserved and new rows are appended; conflicts are resolved
+by an anti-join on \code{biol}, \code{statistic}, \code{year}, \code{iter}, \code{om}, \code{type},
+and \code{run}.}
+
+\item{labels}{The labelling specification used by \code{\link[=labelPerformance]{labelPerformance()}} and
+\code{\link[=setLabelPerformance]{setLabelPerformance()}}. Accepted forms:
+\describe{
+\item{\code{NULL} (default)}{Each row is labelled by its \code{mp} value if one
+is present, or by \code{om} otherwise.}
+\item{\code{"numeric"}}{Management procedures are assigned sequential labels
+\code{"MP1"}, \code{"MP2"}, … in the order they appear.}
+\item{A named \code{list}}{Names are matched against \code{mp} (or \code{om}) and the
+values are used as labels.}
+\item{A \code{data.frame} or \code{data.table}}{Must contain columns \code{element}
+and \code{label}; \code{element} is matched against \code{mp} (or \code{om}).}
+}}
+
+\item{x}{A \code{data.table} containing performance statistics for
+\code{\link[=periodsPerformance]{periodsPerformance()}}, as returned by \code{\link[mse:performance]{mse::performance()}} or
+\code{\link[=readPerformance]{readPerformance()}}. Must contain at least \code{year}, \code{data}, \code{type}, \code{mp},
+\code{statistic}, \code{name}, \code{desc}, and \code{iter}.}
+
+\item{periods}{A vector or list whose elements define the years belonging to
+each period (used by \code{\link[=periodsPerformance]{periodsPerformance()}}). Named elements use the name
+as the period label; unnamed elements are labelled automatically from the
+year range (e.g. \code{"2026-35"}).}
+
+\item{mp}{A character string used by \code{\link[=extractPerformance]{extractPerformance()}} to match
+management procedure identifiers via \code{\link[data.table:like]{data.table::like()}} (\verb{\%like\%}), so
+partial strings and regular-expression patterns are accepted.}
+
+\item{path}{A character string giving the directory containing serialized
+files, used by \code{\link[=getOMPerformance]{getOMPerformance()}} and \code{\link[=getMSEPerformance]{getMSEPerformance()}}.}
+
+\item{pattern}{A character string passed to \code{\link[base:list.files]{base::list.files()}} to filter
+which files are read. Defaults to \code{"*.rds"}.}
+
+\item{fy}{The final year to which each operating model is trimmed with
+\code{\link[FLCore:window]{FLCore::window()}} before performance is computed
+(\code{\link[=getOMPerformance]{getOMPerformance()}} only).}
+
+\item{...}{Additional arguments forwarded to \code{\link[mse:performance]{mse::performance()}}
+(\code{\link[=getOMPerformance]{getOMPerformance()}} only).}
 }
 \value{
-file name, invisibly.
+\describe{
+\item{\code{\link[=writePerformance]{writePerformance()}}, \code{\link[=setLabelPerformance]{setLabelPerformance()}}}{Invisibly \code{TRUE}.}
+\item{\code{\link[=readPerformance]{readPerformance()}}}{A \code{data.table} keyed by \code{om}, \code{type}, \code{run},
+\code{biol}, \code{mp}, \code{statistic}, and \code{year}, with grouping columns as
+factors and column order fixed as \code{om}, \code{type}, \code{run}, \code{mp}, \code{biol},
+\code{statistic}, \code{name}, \code{desc}, \code{year}, \code{iter}, \code{data}.}
+\item{\code{\link[=summaryPerformance]{summaryPerformance()}}}{Invisibly \code{TRUE} (called for its printed
+side-effect).}
+\item{\code{\link[=labelPerformance]{labelPerformance()}}}{A copy of \code{dat} with a \code{label} factor column
+added or replaced; OM-only rows appear first in the factor levels.}
+\item{\code{\link[=periodsPerformance]{periodsPerformance()}}}{A \code{data.table} with one row per grouping
+combination and period, containing \code{period}, \code{year} (compact range
+string), \code{data} (period mean), and the inherited grouping columns.}
+\item{\code{\link[=extractPerformance]{extractPerformance()}}}{A subset of \code{dat} containing the matched MP
+rows and their corresponding OM baseline rows (\code{mp == ""}).}
+\item{\code{\link[=getOMPerformance]{getOMPerformance()}}, \code{\link[=getMSEPerformance]{getMSEPerformance()}}}{A \code{data.table} produced
+by row-binding the performance results from all matching files.}
+}
 }
 \description{
-Write performance table to file
+A family of utilities for persisting, retrieving, labelling, summarizing,
+and reshaping performance statistics tables produced by
+\code{\link[mse:performance]{mse::performance()}}.
+}
+\details{
+\describe{
+\item{\code{\link[=writePerformance]{writePerformance()}}}{Serializes a table to disk, merging with any
+existing file.}
+\item{\code{\link[=readPerformance]{readPerformance()}}}{Reads a stored table and restores column
+classes, key, and factor levels.}
+\item{\code{\link[=summaryPerformance]{summaryPerformance()}}}{Prints a compact console summary.}
+\item{\code{\link[=labelPerformance]{labelPerformance()}}}{Adds or replaces the \code{label} column.}
+\item{\code{\link[=setLabelPerformance]{setLabelPerformance()}}}{Reads, re-labels, and overwrites a stored
+table.}
+\item{\code{\link[=periodsPerformance]{periodsPerformance()}}}{Aggregates annual statistics into
+user-defined periods.}
+\item{\code{\link[=extractPerformance]{extractPerformance()}}}{Subsets to selected MPs together with their
+OM baseline rows.}
+\item{\code{\link[=getOMPerformance]{getOMPerformance()}}}{Batch-reads OM files and returns a combined
+performance table.}
+\item{\code{\link[=getMSEPerformance]{getMSEPerformance()}}}{Batch-reads MSE result files and returns a
+combined performance table.}
+}
+
+\strong{\code{writePerformance}}
+
+Before writing, all columns are coerced to character and then \code{year} and
+\code{data} are restored to numeric to ensure a consistent serialization format.
+Optional columns are normalized: if neither \code{type} nor \code{run} is present,
+empty character columns for \code{type}, \code{run}, and \code{mp} are added; if \code{mp} is
+absent but \code{type} and \code{run} are present, \code{mp} is constructed by pasting
+\code{om}, \code{type}, and \code{run} with \code{"_"}; if \code{label} is absent it is set to \code{mp}
+when an MP is present, otherwise to \code{om}. Column order is standardized to
+\code{om}, \code{type}, \code{run}, \code{mp}, \code{biol}, \code{statistic}, \code{name}, \code{desc}, \code{year},
+\code{iter}, \code{data} before writing.
+
+\strong{\code{readPerformance}}
+
+Reading is performed with \code{\link[data.table:fread]{data.table::fread()}} with explicit \code{colClasses}
+to avoid ambiguous type inference (e.g. when \code{iter} contains non-numeric
+labels or \code{mp} is an empty string). The key set by \code{\link[data.table:setkey]{data.table::setkey()}}
+enables efficient subsetting and is assumed by several downstream functions.
+The \code{label} column is optional; when absent it is not created — use
+\code{\link[=labelPerformance]{labelPerformance()}} to add it after reading.
+
+\strong{\code{periodsPerformance}}
+
+\code{periods} is coerced to a list internally. The compact year label uses only
+the last two digits of the final year (\code{2026:2035} → \code{"2026-35"}). Missing
+values in \code{data} are silently ignored (\code{na.rm = TRUE}). When \code{x} contains a
+\code{label} column the grouping includes it; otherwise grouping is by \code{type},
+\code{mp}, \code{statistic}, \code{name}, \code{desc}, and \code{iter}.
+
+\strong{\code{extractPerformance}}
+
+Operating model baseline rows are identified by an empty string in \code{mp}.
+Because matching uses \verb{\%like\%}, use anchored patterns (e.g. \code{"^HCR1$"})
+when MP names share substrings. Explicit support for a vector of distinct
+MP names is planned.
+
+\strong{\code{getOMPerformance}}
+
+Each \code{.rds} file is expected to contain a list-like object with an \verb{$om}
+component compatible with \code{\link[FLCore:window]{FLCore::window()}} and \code{\link[mse:performance]{mse::performance()}}.
+Warnings from \code{\link[mse:performance]{mse::performance()}} are suppressed with
+\code{\link[base:warning]{base::suppressWarnings()}}; re-run individual files interactively if
+unexpected results appear.
+
+\strong{\code{getMSEPerformance}}
+
+If a file's deserialized object already inherits from \code{data.table} it is
+returned directly, allowing pre-computed performance summaries to be mixed
+with raw MSE objects. \code{fill = TRUE} in \code{\link[data.table:rbindlist]{data.table::rbindlist()}} tolerates
+minor column-structure differences across files.
+}
+\section{Functions}{
+\itemize{
+\item \code{readPerformance()}: Read a performance statistics table from disk,
+restoring column classes, data.table key, column order, and factor levels.
+
+\item \code{summaryPerformance()}: Print a compact console summary of the number
+of operating models, MP types, and management procedures, together with
+per-group year ranges and iteration counts.
+
+\item \code{labelPerformance()}: Add or replace the \code{label} factor column
+in a performance statistics table; OM-only rows appear first in the factor
+levels.
+
+\item \code{setLabelPerformance()}: Convenience wrapper that reads a stored
+performance table, updates its \code{label} column via
+\code{\link[=labelPerformance]{labelPerformance()}}, and writes the result back, replacing the previous
+contents.
+
+\item \code{periodsPerformance()}: Collapse annual performance statistics into
+broader user-defined periods by computing the mean of \code{data} over
+the years belonging to each period.
+
+\item \code{extractPerformance()}: Subset a performance table to the rows
+belonging to management procedures matching a pattern, together with their
+corresponding OM baseline rows (\code{mp == ""}).
+
+\item \code{getOMPerformance()}: Batch-read serialized OM files, trim each to
+\code{fy} with \code{\link[FLCore:window]{FLCore::window()}}, compute \code{\link[mse:performance]{mse::performance()}}, and
+row-bind the results into a single table.
+
+\item \code{getMSEPerformance()}: Batch-read serialized MSE result files or
+pre-computed performance \code{data.table} files and row-bind them into a
+single table.
+
+}}
+\examples{
+\dontrun{
+## writePerformance / readPerformance
+writePerformance(perf_dat)
+dat <- readPerformance()
+dat <- readPerformance("results/performance.dat.gz")
+
+## summaryPerformance
+summaryPerformance()
+summaryPerformance(dat)
+
+## labelPerformance
+dat <- labelPerformance(dat)
+dat <- labelPerformance(dat, labels = "numeric")
+dat <- labelPerformance(dat, labels = list(
+  hcr01 = "Conservative HCR", hcr02 = "Moderate HCR"))
+
+## setLabelPerformance
+setLabelPerformance(labels = "numeric")
+setLabelPerformance("results/performance.dat.gz",
+  labels = list(hcr01 = "Low F", hcr02 = "High F"))
+
+## periodsPerformance
+res <- periodsPerformance(dat, periods = list(
+  short  = 2021:2025,
+  medium = 2026:2035,
+  long   = 2036:2050))
+
+## extractPerformance
+sub <- extractPerformance(dat, "HCR1")
+sub <- extractPerformance(dat, "^HCR1$")
+
+## getOMPerformance
+dat <- getOMPerformance("om", fy = 2025)
+dat <- getOMPerformance("om", fy = 2025, probs = c(0.1, 0.5, 0.9))
+
+## getMSEPerformance
+dat <- getMSEPerformance("mse")
+dat <- getMSEPerformance("mse", pattern = "scenario_.*\\\\.rds$")
+}
+
+}
+\seealso{
+\code{\link[mse:performance]{mse::performance()}}, \link[mse:FLmse-class]{mse::FLmse}, \link[mse:FLmses-class]{mse::FLmses},
+\code{\link[FLCore:window]{FLCore::window()}}, \code{\link[=performanceFLQuants]{performanceFLQuants()}}
 }
 \author{
-Iago Mosqueira, WMR
+Iago MOSQUEIRA \href{mailto:iago.mosqueira@wur.nl}{iago.mosqueira@wur.nl}
 }
+\keyword{file}
+\keyword{manip}
 \keyword{utilities}

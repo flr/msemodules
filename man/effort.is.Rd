@@ -2,7 +2,7 @@
 % Please edit documentation in R/isys.R
 \name{effort.is}
 \alias{effort.is}
-\title{Calculate Effort Multiplier for Harvest Control Rules}
+\title{Effort-multiplier implementation system method}
 \usage{
 effort.is(
   stk,
@@ -14,57 +14,85 @@ effort.is(
 )
 }
 \arguments{
-\item{stk}{An FLStock object containing stock information}
+\item{stk}{An \link[FLCore:FLStock]{FLCore::FLStock} object containing stock and fishery
+information.}
 
-\item{ctrl}{A fwdControl object setting an F or effort target.}
+\item{ctrl}{An \link[FLasher:fwdControl]{FLasher::fwdControl} object whose \code{quant} slot must be
+one of \code{"f"}, \code{"fbar"}, or \code{"effort"} and whose \code{value} slot carries the
+absolute F target from the HCR.}
 
-\item{nyears}{Integer. Number of years to use for calculating mean Fref.
-Default is taken from \code{args$nsqy}}
+\item{nyears}{Integer. Number of years over which the mean reference fishing
+mortality is calculated. Defaults to \code{args$nsqy} as supplied by
+\code{\link[mse:mp]{mse::mp()}}.}
 
-\item{Fref}{Numeric or FLQuant. Reference fishing mortality for scaling. Defaults to
-the mean of fbar over the specified years.}
+\item{Fref}{Numeric or \link[FLCore:FLQuant]{FLCore::FLQuant}. Reference fishing mortality
+used as the denominator when computing the multiplier. Defaults to the
+mean of \code{\link[FLCore:fbar]{FLCore::fbar()}} over the \code{nyears} years ending at \code{dy} (the
+final data year).}
 
-\item{args}{A list containing dimensionality arguments, passed on by mp().}
+\item{args}{A list of management-cycle dimensionality arguments supplied
+automatically by \code{\link[mse:mp]{mse::mp()}}, including at least \code{dy} and \code{nsqy}.}
 
-\item{tracking}{An FLQuant used for tracking indicators, intermediate values, and decisions during MP evaluation.}
+\item{tracking}{An \link[FLCore:FLQuant]{FLCore::FLQuant} used to record intermediate
+values and decisions during MP evaluation, passed through unchanged by
+this method.}
 }
 \value{
-A list containing:
+A list with two elements:
 \describe{
-\item{ctrl}{Updated control list with effort multiplier in \code{value}
-and adjusted years in \code{rel.year}}
-\item{tracking}{Updated tracking object}
+\item{\code{ctrl}}{The input \link[FLasher:fwdControl]{FLasher::fwdControl} object with \code{value}
+replaced by the dimensionless effort multiplier and \code{relYear} set to
+\code{ctrl$year - data_lag} so that \code{\link[FLasher:fwd-methods]{FLasher::fwd()}} interprets the target
+relative to the correct historical year.}
+\item{\code{tracking}}{The tracking object, returned unchanged.}
 }
 }
 \description{
-Converts a harvest control rule (HCR) fihsing mortality target into a multiplier
-relative to a (dynamic) reference fishing mortality level.
+Converts a fishing-mortality target set by an HCR into a relative effort
+multiplier by scaling against a reference fishing mortality computed from
+recent years. Passing a relative effort target to \code{\link[FLasher:fwd-methods]{FLasher::fwd()}} rather
+than an absolute F smooths the response to inter-annual variability in
+fleet dynamics.
 }
 \details{
-The function calculates the effort multiplier as:
-\deqn{mult = \frac{target}{Fref}}{mult = target / Fref}
-}
-\note{
-The \code{ctrl$quant} parameter must be one of "f", "fbar", or "effort".
-Other values will cause the function to stop with an error.
+The effort multiplier is defined as
+\deqn{m = \frac{Ftarget}{F_ref}}{mult = target / Fref}
+where \eqn{F_target} is the value in \code{ctrl$value} as set by the
+HCR and \eqn{F_ref} is the mean \code{\link[FLCore:fbar]{FLCore::fbar()}} over the most
+recent \code{nyears} years of data.
+
+Setting \code{ctrl$relYear} tells \code{\link[FLasher:fwd-methods]{FLasher::fwd()}} to express the effort target
+relative to the effort observed in that reference year, effectively turning
+the absolute F recommendation into a proportional change instruction.
+
+An error is raised immediately if \code{ctrl$quant} is not one of \code{"f"},
+\code{"fbar"}, or \code{"effort"}.
 }
 \examples{
-# Example dataset
+\dontrun{
 data(plesim)
 
-# Sets up an mpCtrl using hockeystick(fbar~ssb)
+# mpCtrl combining a hockey-stick HCR (F target) with effort.is
 ctrl <- mpCtrl(
-  est = mseCtrl(method=perfect.sa),
-  hcr = mseCtrl(method=hockeystick.hcr, args=list(metric="ssb", trigger=45000, 
-    output="fbar", target=0.27)),
-  isys = mseCtrl(method=effort.is, args=list(nyears=3)))
+  est  = mseCtrl(method = perfect.sa),
+  hcr  = mseCtrl(method = hockeystick.hcr,
+           args = list(metric = "ssb", trigger = 45000,
+                       output = "fbar", target = 0.27)),
+  isys = mseCtrl(method = effort.is, args = list(nyears = 3)))
 
-# Runs mp between 2021 and 2035
-run <- mp(om, control=ctrl, args=list(iy=2021, fy=2035))
+run      <- mp(om, control = ctrl,      args = list(iy = 2021, fy = 2035))
+run_nois <- mp(om, control = ctrl[-3],  args = list(iy = 2021, fy = 2035))
 
-# Runs mp without effort.is 'nyears' buffer effect
-run_nois <- mp(om, control=ctrl[-3], args=list(iy=2021, fy=2035))
-
-# Plots results
-plot(om, effort.is=run, no_is=run_nois)
+# Compare with and without the effort.is buffer effect
+plot(om, effort.is = run, no_is = run_nois)
 }
+
+}
+\seealso{
+\code{\link[mse:mp]{mse::mp()}}, \code{\link[mse:split.is]{mse::split.is()}}, \code{\link[mse:mpCtrl-class]{mse::mpCtrl()}}, \code{\link[mse:mseCtrl-class]{mse::mseCtrl()}},
+\code{\link[FLCore:fbar]{FLCore::fbar()}}
+}
+\author{
+Iago MOSQUEIRA \href{mailto:iago.mosqueira@wur.nl}{iago.mosqueira@wur.nl}
+}
+\keyword{manip}
