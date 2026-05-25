@@ -31,7 +31,7 @@ globalVariables(c("unit"))
 
 validatePerformance <- function(dat) {
 
-  required <- c("om", "biol", "statistic", "year", "iter", "data")
+  required <- c("om", "statistic", "year", "iter", "data")
   missing  <- setdiff(required, names(dat))
   if(length(missing))
     stop("Missing required columns: ", paste(missing, collapse=", "))
@@ -50,7 +50,7 @@ validatePerformance <- function(dat) {
 
   dups <- sum(duplicated(dat[, ..key_cols]))
   if(dups > 0)
-    warning(dups, " duplicate row(s) on primary key — table may not be unique after write.")
+    warning(dups, " duplicate row(s) on primary key - table may not be unique after write.")
 
   invisible(TRUE)
 }
@@ -84,7 +84,7 @@ hasPerformance <- function(file="model/performance.dat.gz", om=NULL, type=NULL, 
 
 #' @describeIn writePerformance Return a compact catalogue of the
 #'   \code{(om, type, run, mp)} combinations stored in a performance file,
-#'   together with row count, year range, and number of distinct iterations —
+#'   together with row count, year range, and number of distinct iterations
 #'   without loading the \code{data} column.
 #' @keywords file
 
@@ -155,7 +155,7 @@ deletePerformance <- function(file="model/performance.dat.gz",
 diffPerformance <- function(dat, file="model/performance.dat.gz") {
 
   if(!file.exists(file)) {
-    message("File does not exist — all rows are new.")
+    message("File does not exist, all rows are new.")
     return(list(new=dat[], replace=dat[0], unchanged=dat[0]))
   }
 
@@ -238,7 +238,7 @@ diffPerformance <- function(dat, file="model/performance.dat.gz") {
 #'     \item{`NULL` (default)}{Each row is labelled by its `mp` value if one
 #'       is present, or by `om` otherwise.}
 #'     \item{`"numeric"`}{Management procedures are assigned sequential labels
-#'       `"MP1"`, `"MP2"`, … in the order they appear.}
+#'       `"MP1"`, `"MP2"`, ... in the order they appear.}
 #'     \item{A named `list`}{Names are matched against `mp` (or `om`) and the
 #'       values are used as labels.}
 #'     \item{A `data.frame` or `data.table`}{Must contain columns `element`
@@ -310,13 +310,13 @@ diffPerformance <- function(dat, file="model/performance.dat.gz") {
 #' to avoid ambiguous type inference (e.g. when `iter` contains non-numeric
 #' labels or `mp` is an empty string). The key set by [data.table::setkey()]
 #' enables efficient subsetting and is assumed by several downstream functions.
-#' The `label` column is optional; when absent it is not created — use
+#' The `label` column is optional; when absent it is not created, use
 #' [labelPerformance()] to add it after reading.
 #'
 #' **`periodsPerformance`**
 #'
 #' `periods` is coerced to a list internally. The compact year label uses only
-#' the last two digits of the final year (`2026:2035` → `"2026-35"`). Missing
+#' the last two digits of the final year (`2026:2035` to `"2026-35"`). Missing
 #' values in `data` are silently ignored (`na.rm = TRUE`). When `x` contains a
 #' `label` column the grouping includes it; otherwise grouping is by `type`,
 #' `mp`, `statistic`, `name`, `desc`, and `iter`.
@@ -416,6 +416,7 @@ diffPerformance <- function(dat, file="model/performance.dat.gz") {
 
 writePerformance <- function(dat, file="model/performance.dat.gz", overwrite=FALSE) {
 
+  # COPY to avoid direct changes
   dat <- copy(dat)
 
   # HACK to avoid method, for now
@@ -423,6 +424,11 @@ writePerformance <- function(dat, file="model/performance.dat.gz", overwrite=FAL
     dat <- performance(dat)
   }
 
+  # ADD empty biol if missing (single-stock / FLom case)
+  if(!"biol" %in% names(dat))
+    dat[, biol := ""]
+
+  # VALIDATE table
   validatePerformance(dat)
 
   # SET correct column types
@@ -466,10 +472,15 @@ writePerformance <- function(dat, file="model/performance.dat.gz", overwrite=FAL
     # ADD new rows
     new_cols <- setdiff(names(dat), names(db))
     old_cols <- setdiff(names(db),  names(dat))
+
+    # WARN of new and old columns
     if(length(new_cols))
       message("New columns in dat not in file (filled with NA): ", paste(new_cols, collapse=", "))
+
     if(length(old_cols))
       message("Columns in file not in dat (filled with NA): ",    paste(old_cols, collapse=", "))
+    
+    # BIND tables
     db <- data.table::rbindlist(list(db, dat), fill = TRUE)
 
     # WRITE to file
@@ -488,23 +499,23 @@ writePerformance <- function(dat, file="model/performance.dat.gz", overwrite=FAL
 
 readPerformance <- function(file="model/performance.dat.gz") {
 
-  # READ file
+  # FREAD forcing column classes
   dat <- fread(file, colClasses=c(type='character', run='character',
     mp='character', biol='character', year='numeric', iter='character',
     data='numeric'))
 
-  # SET key
-  setkey(dat, om, type, run, biol, mp, statistic, year)
+  # SET column order FIRST
+  setcolorder(dat, neworder=intersect(c('om', 'type', 'run', 'mp', 'biol',
+    'statistic', 'name', 'desc', 'year', 'iter', 'data'), names(dat)))
 
-  # SET column order
-  setcolorder(dat, neworder=c('om', 'type', 'run', 'mp', 'biol', 'statistic',
-    'name', 'desc', 'year', 'iter', 'data'))
-
-  # SET as factor
-  cols <- intersect(c('om', 'type', 'run', 'mp', 'biol', 'statistic', 'label'), names(dat))
+  # CONVERT grouping columns to factor
+  cols <- intersect(c('om', 'type', 'run', 'mp', 'biol', 'statistic', 'label'),
+    names(dat))
   dat[, (cols) := lapply(.SD, factor), .SDcols = cols]
 
-  # RETURN
+  # SET key AFTER factor conversion — key is on numeric/character columns only
+  setkey(dat, statistic, year)
+
   return(dat[])
 }
 
@@ -747,8 +758,8 @@ getMSEPerformance <- function(path, pattern="*.rds") {
 #'   `data.table`. When `x` is an `FLmse` or `FLmses`, the performance slot is
 #'   extracted automatically via [mse::performance()]. When `x` is a
 #'   `data.table`, it must contain at least the columns `statistic`, `year`,
-#'   `iter`, `data`, and `mp`. An optional `biol` column — present in outputs
-#'   from [mse::mp()] on `FLombf` operating models — is mapped to the `unit`
+#'   `iter`, `data`, and `mp`. An optional `biol` column, present in outputs
+#'   from [mse::mp()] on `FLombf` operating models, is mapped to the `unit`
 #'   dimension of the resulting [FLCore::FLQuant-class].
 #'
 #' @return
@@ -791,7 +802,7 @@ getMSEPerformance <- function(path, pattern="*.rds") {
 #' flqs <- performanceFLQuants(dat)
 #' flqs[["MP1"]]["SSB", , , , ,]
 #'
-#' # Convenience wrapper — returns FLQuant directly for a single MP
+#' # Convenience wrapper, returns FLQuant directly for a single MP
 #' flq <- performanceFLQuant(dat)
 #' }
 #'
