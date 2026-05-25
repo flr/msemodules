@@ -72,9 +72,14 @@ hasPerformance <- function(file="model/performance.dat.gz", om=NULL, type=NULL, 
 
   db <- fread(file, select=c("om", "type", "run"))
 
-  if(!is.null(om))   db <- db[get("om")   == om]
-  if(!is.null(type)) db <- db[get("type") == type]
-  if(!is.null(run))  db <- db[get("run")  == run]
+  # COPY args to unambiguous locals — avoids column/arg name clash in [...]
+  .om   <- om
+  .type <- type
+  .run  <- run
+
+  if(!is.null(.om))   db <- db[om   == .om]
+  if(!is.null(.type)) db <- db[type == .type]
+  if(!is.null(.run))  db <- db[run  == .run]
 
   return(nrow(db) > 0L)
 }
@@ -124,12 +129,17 @@ deletePerformance <- function(file="model/performance.dat.gz",
 
   db <- readPerformance(file)
 
-  # BUILD mask of rows to DELETE
+  # COPY args to unambiguous locals
+  .om   <- om
+  .type <- type
+  .run  <- run
+  .mp   <- mp
+
   mask <- rep(TRUE, nrow(db))
-  if(!is.null(om))   mask <- mask & (as.character(db[["om"]])   %in% om)
-  if(!is.null(type)) mask <- mask & (as.character(db[["type"]]) %in% type)
-  if(!is.null(run))  mask <- mask & (as.character(db[["run"]])  %in% run)
-  if(!is.null(mp))   mask <- mask & (as.character(db[["mp"]])   %in% mp)
+  if(!is.null(.om))   mask <- mask & (as.character(db[["om"]])   %in% .om)
+  if(!is.null(.type)) mask <- mask & (as.character(db[["type"]]) %in% .type)
+  if(!is.null(.run))  mask <- mask & (as.character(db[["run"]])  %in% .run)
+  if(!is.null(.mp))   mask <- mask & (as.character(db[["mp"]])   %in% .mp)
 
   deleted <- db[mask]
   message(sum(mask), " row(s) selected for deletion.")
@@ -138,7 +148,6 @@ deletePerformance <- function(file="model/performance.dat.gz",
     return(deleted[])
 
   .atomicWrite(db[!mask], file)
-
   invisible(deleted[])
 }
 # }}}
@@ -571,55 +580,71 @@ summaryPerformance <- function(file="model/performance.dat.gz") {
 
 labelPerformance <- function(dat, labels=NULL) {
 
+  # COPY to avoid modifying caller's object
+  dat <- copy(dat)
+
+  # COERCE factor columns to character FIRST — must happen in all branches
+  if(is.factor(dat[["mp"]])) dat[, mp := as.character(mp)]
+  if(is.factor(dat[["om"]])) dat[, om := as.character(om)]
+  if(is.factor(dat[["label"]])) dat[, label := as.character(label)]
+
+  # HELPER: set label as factor with OM rows first
+  .setLabelFactor <- function(dat) {
+    levs <- c(
+      unique(dat[mp == "", label]),
+      sort(unique(dat[mp != "", label])))
+    dat[, label := factor(label, levels=levs)]
+    dat
+  }
+
   # NO label, use mp | om
   if(is.null(labels)) {
-    dat[, label:=ifelse(mp == character(1), om, mp)]
-    return(dat[])
+    dat[, label := ifelse(mp == "", om, mp)]
+    return(.setLabelFactor(dat)[])
 
-  # 'numeric', set as sequence in unique order for mp
+  # 'numeric': sequential MP1, MP2, ... in order of appearance
   } else if(identical(labels, "numeric")) {
-    labels <- data.table(mp=unique(dat[mp != character(1), mp]), 
-      label=paste0("MP", seq(unique(dat[mp != character(1), mp]))))
-  
-  # LIST, convert to data.table
+    mps <- unique(dat[mp != "", mp])
+    labels <- data.table(element=mps, label=paste0("MP", seq_along(mps)))
+
+  # LIST: convert to data.table with 'element' column
   } else if(is.list(labels)) {
     labels <- data.table(element=names(labels), label=unlist(labels))
 
-  # SET as data.table JIC
+  # data.frame/data.table: ensure correct class
   } else {
-    labels <- data.table(labels)
+    labels <- as.data.table(labels)
   }
 
-  # GET dims
+  # CHECK labels has required columns
+  if(!all(c("element", "label") %in% names(labels)))
+    stop("'labels' must have columns 'element' and 'label'.")
+
+  # GET dims for post-merge check
   dimdat <- dim(dat)
 
-  # CREATE tmp column to match mp | om
-  dat[, element:=ifelse(mp == "", as.character(om), as.character(mp))]
+  # CREATE tmp column: mp if set, otherwise om
+  dat[, element := ifelse(mp == "", om, mp)]
 
-  # MERGE new labels on matching element
-  dat <- merge(dat[, !"label"], labels[element %in% unique(dat$element)],
-    by="element", all=TRUE)
+  # DROP existing label column if present
+  if("label" %in% names(dat))
+    dat[, label := NULL]
 
-  # TODO dat <- dat[, !"label"][labels, on = .(element = element), roll = TRUE, nomatch=0]
+  # MERGE new labels (left join — unmatched rows keep their element as label)
+  dat <- merge(dat, labels[element %in% unique(dat$element)],
+    by="element", all.x=TRUE)
 
-  # SET NA to empty string
-  dat[, label:=ifelse(is.na(label), element, label)]
+  # SET NA labels to element value
+  dat[, label := ifelse(is.na(label), element, label)]
 
   # DROP tmp column
-  dat[, element:=NULL]
-  
-  # SET as factor, OM labels (no mp) first
-  levs <- c(dat[mp == character(1),
-    unique(label)], sort(dat[mp != character(1), unique(label)]))
- 
-  dat[, label := factor(label, levels=levs)]
+  dat[, element := NULL]
 
-  # CHECK dims
+  # CHECK dims unchanged
   if(!identical(dim(dat), dimdat))
-    warning("Mismatch in dimensions of tables, check output.")
+    warning("Mismatch in dimensions of table, check output.")
 
-  # END
-  return(dat[])
+  return(.setLabelFactor(dat)[])
 }
 # }}}
 
