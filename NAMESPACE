@@ -31,12 +31,16 @@ export(
   "buffer_bands",
   "buffer.hcr",
   "depletion.hcr",
+  "deletePerformance",
   "effort.is",
+  "diffPerformance",
   "extractPerformance",
   "getMSEPerformance",
   "getOMPerformance",
+  "hasPerformance",
   "inspect",
   "labelPerformance",
+  "listPerformance",
   "performanceFLQuant",
   "performanceFLQuants",
   "periodsPerformance",
@@ -49,5 +53,6 @@ export(
   "summaryPerformance",
   "trackingFLQuant",
   "trackingFLQuants",
+  "validatePerformance",
   "writePerformance"
   )
