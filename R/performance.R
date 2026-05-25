@@ -9,8 +9,6 @@
 
 globalVariables(c("unit"))
 
-# CRUD: write, read, update, delete
-
 # atomicWrite {{{
 
 .atomicWrite <- function(db, file) {
@@ -550,23 +548,18 @@ summaryPerformance <- function(file="model/performance.dat.gz") {
     # frequency
     frq=c(dist(sort(unique(as.numeric(year)))[1:2])),
     # no. iters
-    iter=length(unique(iter))
+    iter=length(unique(iter)),
+    # no. statistics
+    statistics=length(unique(statistic))
     # DO by om, type & run
-    ), by=.(om, type, run)]
+    ), by=.(om, type, label)]
 
   setorder(res, om, type, run)
 
-  # GET summary row values
-  summ <- file[, lapply(.SD, function(x) length(unique(x))),
-    .SDcols = c("om", "type", "mp")] 
-
-  # PRINT it
-  cat(do.call(sprintf, c(list(fmt="- oms: %i, types: %i, mps: %i\n"), unlist(summ))))
-
   # PRINT tree or summary table
-  # print(as.data.frame(res))
+  print(as.data.frame(res))
 
-  invisible(TRUE)
+  invisible(res)
 }
 
 # }}}
@@ -673,37 +666,55 @@ setLabelPerformance <- function(file="model/performance.dat.gz", labels) {
 #'   the years belonging to each period.
 #' @keywords manip
 
-periodsPerformance <- function(x, periods) {
+periodsPerformance <- function(x, periods=list(), ...) {
+
+  # COLLECT any named ... args (e.g. short=2026:2030, long=2031:2040)
+  dots <- list(...)
+
+  # MERGE with periods list — dots take precedence on name clash
+  periods <- c(periods, dots)
+
+  # MUST have at least one period
+  if(length(periods) == 0)
+    stop("Supply at least one period, e.g. periodsPerformance(x, short=2026:2030).")
 
   # COERCE to list
   periods <- as.list(periods)
- 
-  years <- unlist(lapply(periods, function(x) {
-    if(length(x) > 1)
-      paste(x[1], substr(rev(x)[1], 3, 4), sep="-")
+
+  # BUILD compact year labels: 2026:2035 -> "2026-35", single year -> "2030"
+  years <- unlist(lapply(periods, function(p) {
+    if(length(p) > 1)
+      paste(p[1], substr(as.character(rev(p)[1]), 3, 4), sep="-")
     else
-      x
+      as.character(p)
   }))
 
-  # ASSIGN names if missing
-  names(periods)[names(periods) == character(1)] <-
-    years[names(periods) == character(1)]
+  # ASSIGN names to unnamed periods from year label
+  nms <- names(periods)
+  if(is.null(nms)) nms <- rep("", length(periods))
+  nms[nms == ""] <- years[nms == ""]
+  names(periods) <- nms
 
-  # COMPUTE means per period by label or mp
-  if("label" %in% colnames(x)) {
-    res <- rbindlist(Map(function(pe, na, ye) {
-      x[year %in% pe, .(data=mean(data, na.rm=TRUE), period=na, year=ye),
-      by=.(type, mp, label, statistic, name, desc, iter)]},
-      pe=periods, na=names(periods), ye=years))
-  } else {
-    res <- rbindlist(Map(function(pe, na, ye) {
-      x[year %in% pe, .(data=mean(data, na.rm=TRUE), period=na, year=ye),
-      by=.(type, mp, statistic, name, desc, iter)]},
-      pe=periods, na=names(periods), ye=years))
-  }
+  # COMPUTE means per period
+  grp <- if("label" %in% colnames(x))
+    quote(.(om, type, mp, label, statistic, name, desc, iter))
+  else
+    quote(.(om, type, mp, statistic, name, desc, iter))
+
+  res <- rbindlist(Map(function(pe, na, ye) {
+    x[year %in% pe,
+      .(data=mean(data, na.rm=TRUE), period=na, year=ye),
+      by=eval(grp)]
+    }, pe=periods, na=names(periods), ye=years))
+
+  # RENAME col to  years
+  setnames(res, "year", "years")
 
   return(res)
 }
+
+
+
 # }}}
 
 # extractPerformance {{{
