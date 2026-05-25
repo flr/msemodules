@@ -11,6 +11,178 @@ globalVariables(c("unit"))
 
 # CRUD: write, read, update, delete
 
+# atomicWrite {{{
+
+.atomicWrite <- function(db, file) {
+  tmp <- paste0(file, ".tmp")
+  on.exit(unlink(tmp), add = TRUE)
+  fwrite(db, file = tmp)
+  file.rename(tmp, file)
+  invisible(TRUE)
+}
+# }}}
+
+# validatePerformance {{{
+
+#' @describeIn writePerformance Validate a performance statistics table,
+#'   checking for required columns, correct numeric types, NA values in key
+#'   columns, and duplicate rows on the composite primary key.
+#' @keywords utilities
+
+validatePerformance <- function(dat) {
+
+  required <- c("om", "biol", "statistic", "year", "iter", "data")
+  missing  <- setdiff(required, names(dat))
+  if(length(missing))
+    stop("Missing required columns: ", paste(missing, collapse=", "))
+
+  if(!is.numeric(dat[["year"]]))
+    stop("Column 'year' must be numeric.")
+  if(!is.numeric(dat[["data"]]))
+    stop("Column 'data' must be numeric.")
+
+  key_cols <- intersect(c("om", "type", "run", "biol", "statistic", "year", "iter"),
+    names(dat))
+  na_counts <- dat[, lapply(.SD, function(x) sum(is.na(x))), .SDcols = key_cols]
+  bad <- names(na_counts)[unlist(na_counts) > 0]
+  if(length(bad))
+    warning("NA values found in key column(s): ", paste(bad, collapse=", "))
+
+  dups <- sum(duplicated(dat[, ..key_cols]))
+  if(dups > 0)
+    warning(dups, " duplicate row(s) on primary key — table may not be unique after write.")
+
+  invisible(TRUE)
+}
+# }}}
+
+# hasPerformance {{{
+
+#' @describeIn writePerformance Test whether a stored performance table
+#'   contains rows matching the supplied identifiers, without reading the full
+#'   table into memory.
+#' @param om,type,run Character scalar identifiers used to filter the stored
+#'   table. Any combination may be supplied; unspecified arguments are ignored.
+#' @keywords file
+
+hasPerformance <- function(file="model/performance.dat.gz", om=NULL, type=NULL, run=NULL) {
+
+  if(!file.exists(file))
+    return(FALSE)
+
+  db <- fread(file, select=c("om", "type", "run"))
+
+  if(!is.null(om))   db <- db[get("om")   == om]
+  if(!is.null(type)) db <- db[get("type") == type]
+  if(!is.null(run))  db <- db[get("run")  == run]
+
+  return(nrow(db) > 0L)
+}
+# }}}
+
+# listPerformance {{{
+
+#' @describeIn writePerformance Return a compact catalogue of the
+#'   \code{(om, type, run, mp)} combinations stored in a performance file,
+#'   together with row count, year range, and number of distinct iterations —
+#'   without loading the \code{data} column.
+#' @keywords file
+
+listPerformance <- function(file="model/performance.dat.gz") {
+
+  if(!file.exists(file))
+    stop("File not found: ", file)
+
+  db <- fread(file, select=c("om", "type", "run", "mp", "year", "iter"))
+
+  res <- db[, .(
+    rows  = .N,
+    years = paste(min(year), max(year), sep="-"),
+    iters = length(unique(iter))
+  ), by=.(om, type, run, mp)]
+
+  setorder(res, om, type, run, mp)
+
+  return(res[])
+}
+# }}}
+
+# deletePerformance {{{
+
+#' @describeIn writePerformance Delete rows from a stored performance table
+#'   that match the supplied identifiers.  When \code{dry_run = TRUE} the rows
+#'   that \emph{would} be deleted are returned without modifying the file.
+#' @param dry_run Logical. If \code{TRUE} (default \code{FALSE}), return the
+#'   rows that would be deleted without writing any changes.
+#' @keywords file
+
+deletePerformance <- function(file="model/performance.dat.gz",
+  om=NULL, type=NULL, run=NULL, mp=NULL, dry_run=FALSE) {
+
+  if(!file.exists(file))
+    stop("File not found: ", file)
+
+  db <- readPerformance(file)
+
+  # BUILD mask of rows to DELETE
+  mask <- rep(TRUE, nrow(db))
+  if(!is.null(om))   mask <- mask & (as.character(db[["om"]])   %in% om)
+  if(!is.null(type)) mask <- mask & (as.character(db[["type"]]) %in% type)
+  if(!is.null(run))  mask <- mask & (as.character(db[["run"]])  %in% run)
+  if(!is.null(mp))   mask <- mask & (as.character(db[["mp"]])   %in% mp)
+
+  deleted <- db[mask]
+  message(sum(mask), " row(s) selected for deletion.")
+
+  if(dry_run)
+    return(deleted[])
+
+  .atomicWrite(db[!mask], file)
+
+  invisible(deleted[])
+}
+# }}}
+
+# diffPerformance {{{
+
+#' @describeIn writePerformance Compare an in-memory performance table against
+#'   a stored file and categorise every row as \emph{new}, \emph{replace}
+#'   (key exists in file), or \emph{unchanged} (key exists and values are
+#'   identical).  Returns a named list of three \code{data.table}s; the file
+#'   is not modified.
+#' @keywords file
+
+diffPerformance <- function(dat, file="model/performance.dat.gz") {
+
+  if(!file.exists(file)) {
+    message("File does not exist — all rows are new.")
+    return(list(new=dat[], replace=dat[0], unchanged=dat[0]))
+  }
+
+  key_cols <- intersect(c("om", "type", "run", "biol", "statistic", "year", "iter"),
+    names(dat))
+
+  db <- readPerformance(file)
+
+  # NEW rows: key not in db
+  new_rows <- dat[!db, on=key_cols]
+
+  # Rows whose key IS in db
+  existing <- dat[db, on=key_cols, nomatch=NULL]
+
+  # UNCHANGED: key + data match
+  unchanged <- existing[db, on=c(key_cols, "data"), nomatch=NULL]
+
+  # REPLACE: key matches but data differs
+  replace <- existing[!unchanged, on=key_cols]
+
+  message(nrow(new_rows), " new, ", nrow(replace), " replace, ",
+    nrow(unchanged), " unchanged.")
+
+  return(list(new=new_rows[], replace=replace[], unchanged=unchanged[]))
+}
+# }}}
+
 # writePerformance {{{
 
 #' Read and write performance statistics tables
@@ -20,6 +192,16 @@ globalVariables(c("unit"))
 #' [mse::performance()].
 #'
 #' \describe{
+#'   \item{[validatePerformance()]}{Checks required columns, numeric types,
+#'     NA values in key columns, and key uniqueness; stops or warns on failure.}
+#'   \item{[hasPerformance()]}{Returns \code{TRUE} if the file contains rows
+#'     matching the supplied identifiers, without loading the full table.}
+#'   \item{[listPerformance()]}{Returns a catalogue \code{data.table} of
+#'     \code{(om, type, run, mp)} combinations with row counts and year ranges.}
+#'   \item{[deletePerformance()]}{Deletes rows matching supplied identifiers;
+#'     supports a \code{dry_run} preview mode.}
+#'   \item{[diffPerformance()]}{Compares an in-memory table against the stored
+#'     file and categorises rows as new, replace, or unchanged.}
 #'   \item{[writePerformance()]}{Serializes a table to disk, merging with any
 #'     existing file.}
 #'   \item{[readPerformance()]}{Reads a stored table and restores column
@@ -70,9 +252,10 @@ globalVariables(c("unit"))
 #'   each period (used by [periodsPerformance()]). Named elements use the name
 #'   as the period label; unnamed elements are labelled automatically from the
 #'   year range (e.g. `"2026-35"`).
-#' @param mp A character string used by [extractPerformance()] to match
-#'   management procedure identifiers via [data.table::like()] (`%like%`), so
-#'   partial strings and regular-expression patterns are accepted.
+#' @param mp A character value (or vector) used by [extractPerformance()].
+#'   Length-1 values are matched with [data.table::like()] (`%like%`) so
+#'   partial strings and regular-expression patterns are accepted; vectors are
+#'   matched exactly with `%in%`.
 #' @param path A character string giving the directory containing serialized
 #'   files, used by [getOMPerformance()] and [getMSEPerformance()].
 #' @param pattern A character string passed to [base::list.files()] to filter
@@ -86,6 +269,11 @@ globalVariables(c("unit"))
 #' @return
 #' \describe{
 #'   \item{[writePerformance()], [setLabelPerformance()]}{Invisibly `TRUE`.}
+#'   \item{[deletePerformance()]}{Invisibly, a \code{data.table} of the deleted
+#'     rows. When \code{dry_run = TRUE}, the rows that would be deleted are
+#'     returned visibly without modifying the file.}
+#'   \item{[diffPerformance()]}{A named list with elements \code{new},
+#'     \code{replace}, and \code{unchanged}, each a \code{data.table}.}
 #'   \item{[readPerformance()]}{A `data.table` keyed by `om`, `type`, `run`,
 #'     `biol`, `mp`, `statistic`, and `year`, with grouping columns as
 #'     factors and column order fixed as `om`, `type`, `run`, `mp`, `biol`,
@@ -136,9 +324,9 @@ globalVariables(c("unit"))
 #' **`extractPerformance`**
 #'
 #' Operating model baseline rows are identified by an empty string in `mp`.
-#' Because matching uses `%like%`, use anchored patterns (e.g. `"^HCR1$"`)
-#' when MP names share substrings. Explicit support for a vector of distinct
-#' MP names is planned.
+#' For scalar `mp`, matching uses `%like%`; use anchored patterns (e.g.
+#' `"^HCR1$"`) when MP names share substrings. For vectors, exact matching
+#' (`%in%`) is used.
 #'
 #' **`getOMPerformance`**
 #'
@@ -164,6 +352,29 @@ globalVariables(c("unit"))
 #' writePerformance(perf_dat)
 #' dat <- readPerformance()
 #' dat <- readPerformance("results/performance.dat.gz")
+#'
+#' ## validatePerformance
+#' validatePerformance(perf_dat)
+#'
+#' ## hasPerformance
+#' hasPerformance()
+#' hasPerformance(om = "ple.27.420")
+#' if(!hasPerformance(om = "ple.27.420", run = "r01"))
+#'   writePerformance(perf_dat)
+#'
+#' ## listPerformance
+#' listPerformance()
+#' listPerformance("results/performance.dat.gz")
+#'
+#' ## diffPerformance
+#' d <- diffPerformance(perf_dat)
+#' d$replace
+#' if(nrow(d$replace) == 0) writePerformance(perf_dat)
+#'
+#' ## deletePerformance
+#' deletePerformance(om = "ple.27.420", run = "r01", dry_run = TRUE)
+#' deletePerformance(om = "ple.27.420", run = "r01")
+#' deletePerformance(mp = "hcr_Fmsy")
 #'
 #' ## summaryPerformance
 #' summaryPerformance()
@@ -205,10 +416,14 @@ globalVariables(c("unit"))
 
 writePerformance <- function(dat, file="model/performance.dat.gz", overwrite=FALSE) {
 
+  dat <- copy(dat)
+
   # HACK to avoid method, for now
   if(is(dat, 'FLmse') | is(dat, 'FLmses')) {
     dat <- performance(dat)
   }
+
+  validatePerformance(dat)
 
   # SET correct column types
   dat[, (colnames(dat)) := lapply(.SD, as.character), .SDcols = colnames(dat)]
@@ -235,7 +450,7 @@ writePerformance <- function(dat, file="model/performance.dat.gz", overwrite=FAL
   # CREATE
   if(!file.exists(file) | overwrite) {
 
-    fwrite(dat, file=file)
+    .atomicWrite(dat, file)
 
     invisible(TRUE)
 
@@ -249,10 +464,16 @@ writePerformance <- function(dat, file="model/performance.dat.gz", overwrite=FAL
     db <- db[!dat, on=.(biol, statistic, year, iter, om, type, run)]
 
     # ADD new rows
-    db <- rbind(db, dat)
+    new_cols <- setdiff(names(dat), names(db))
+    old_cols <- setdiff(names(db),  names(dat))
+    if(length(new_cols))
+      message("New columns in dat not in file (filled with NA): ", paste(new_cols, collapse=", "))
+    if(length(old_cols))
+      message("Columns in file not in dat (filled with NA): ",    paste(old_cols, collapse=", "))
+    db <- data.table::rbindlist(list(db, dat), fill = TRUE)
 
     # WRITE to file
-    fwrite(db, file=file)
+    .atomicWrite(db, file)
 
     invisible(TRUE)
   }
@@ -280,7 +501,7 @@ readPerformance <- function(file="model/performance.dat.gz") {
     'name', 'desc', 'year', 'iter', 'data'))
 
   # SET as factor
-  cols <- c('om', 'type', 'run', 'mp', 'biol', 'statistic', 'label')
+  cols <- intersect(c('om', 'type', 'run', 'mp', 'biol', 'statistic', 'label'), names(dat))
   dat[, (cols) := lapply(.SD, factor), .SDcols = cols]
 
   # RETURN
@@ -384,7 +605,7 @@ labelPerformance <- function(dat, labels=NULL) {
 
   # CHECK dims
   if(!identical(dim(dat), dimdat))
-    warning("Missmatch in dimensions of tables, check output.")
+    warning("Mismatch in dimensions of tables, check output.")
 
   # END
   return(dat[])
@@ -463,10 +684,11 @@ extractPerformance <- function(dat, mp) {
   # ASSIGN to avoid column match 
   smp <- mp
 
-  dat[mp %like% smp]
-
   # FIND mps & om
-  sub <- dat[mp %like% smp]
+  if(length(smp) > 1)
+    sub <- dat[mp %in% smp]
+  else
+    sub <- dat[mp %like% smp]
   mps <- sub[, as.character(unique(mp))]
   oms <- sub[, as.character(unique(om))]
 
