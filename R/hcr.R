@@ -90,7 +90,7 @@ buffer.hcr <- function(stk, ind, metric='wmean',
   # TRACK rule decision
   track(tracking, "decision.hcr", ay) <- as.numeric(dec)
 
-  # TRACK rule classification (tier)
+  # TRACK rule classification (tier): 1-4
   tier <- as.numeric(cut(met, c(0, lim, bufflow, buffupp, Inf), labels=seq(1,4)))
   tier[is.na(tier)] <- 0
   track(tracking, "tier.hcr", ay) <- tier
