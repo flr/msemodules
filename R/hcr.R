@@ -85,20 +85,20 @@ buffer.hcr <- function(stk, ind, metric='wmean',
     # BETWEEN bufflow and buffupp
     ifelse(met < buffupp, 1, 
     # ABOVE buffupp, as proportion of downward gradient
-      1 + sloperatio * ((1 - 2^(-1)) / (bufflow - lim)) * (met - buffupp))))
+      1 + sloperatio * (0.5 / (bufflow - lim)) * (met - buffupp))))
 
   # TRACK rule decision
   track(tracking, "decision.hcr", ay) <- as.numeric(dec)
 
-  # TRACK rule classification (tier)
+  # TRACK rule classification (tier): 1-4
   tier <- as.numeric(cut(met, c(0, lim, bufflow, buffupp, Inf), labels=seq(1,4)))
   tier[is.na(tier)] <- 0
   track(tracking, "tier.hcr", ay) <- tier
 
   # GET previous output value if change limited
-  
   pre <- FLQuant(initial, iter=args$it)
   
+  # TODO: USE mean of past n years
   if(ay > iy & !scale) {
       pre <- tracking[metric == 'hcr' & year == ay - frq, data]
   } 
