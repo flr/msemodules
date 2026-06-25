@@ -57,7 +57,24 @@ and reshaping performance statistics tables produced by
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">writePerformance</span><span class="op">(</span><span class="va">dat</span>, file <span class="op">=</span> <span class="st">"model/performance.dat.gz"</span>, overwrite <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">validatePerformance</span><span class="op">(</span><span class="va">dat</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">hasPerformance</span><span class="op">(</span>file <span class="op">=</span> <span class="st">"model/performance.dat.gz"</span>, om <span class="op">=</span> <span class="cn">NULL</span>, type <span class="op">=</span> <span class="cn">NULL</span>, run <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">listPerformance</span><span class="op">(</span>file <span class="op">=</span> <span class="st">"model/performance.dat.gz"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">deletePerformance</span><span class="op">(</span></span>
+<span>  file <span class="op">=</span> <span class="st">"model/performance.dat.gz"</span>,</span>
+<span>  om <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  type <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  run <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  mp <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  dry_run <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">diffPerformance</span><span class="op">(</span><span class="va">dat</span>, file <span class="op">=</span> <span class="st">"model/performance.dat.gz"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">writePerformance</span><span class="op">(</span><span class="va">dat</span>, file <span class="op">=</span> <span class="st">"model/performance.dat.gz"</span>, overwrite <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">readPerformance</span><span class="op">(</span>file <span class="op">=</span> <span class="st">"model/performance.dat.gz"</span><span class="op">)</span></span>
 <span></span>
@@ -101,6 +118,11 @@ by an anti-join on <code>biol</code>, <code>statistic</code>, <code>year</code>,
 and <code>run</code>.</p></dd>
 
 
+<dt id="arg-om-type-run">om, type, run<a class="anchor" aria-label="anchor" href="#arg-om-type-run"></a></dt>
+<dd><p>Character scalar identifiers used to filter the stored
+table. Any combination may be supplied; unspecified arguments are ignored.</p></dd>
+
+
 <dt id="arg-labels">labels<a class="anchor" aria-label="anchor" href="#arg-labels"></a></dt>
 <dd><p>The labelling specification used by <code>labelPerformance()</code> and
 <code>setLabelPerformance()</code>. Accepted forms:</p><dl><dt><code>NULL</code> (default)</dt>
@@ -138,9 +160,10 @@ year range (e.g. <code>"2026-35"</code>).</p></dd>
 
 
 <dt id="arg-mp">mp<a class="anchor" aria-label="anchor" href="#arg-mp"></a></dt>
-<dd><p>A character string used by <code>extractPerformance()</code> to match
-management procedure identifiers via <code><a href="https://rdrr.io/pkg/data.table/man/like.html" class="external-link">data.table::like()</a></code> (<code>%like%</code>), so
-partial strings and regular-expression patterns are accepted.</p></dd>
+<dd><p>A character value (or vector) used by <code>extractPerformance()</code>.
+Length-1 values are matched with <code><a href="https://rdrr.io/pkg/data.table/man/like.html" class="external-link">data.table::like()</a></code> (<code>%like%</code>) so
+partial strings and regular-expression patterns are accepted; vectors are
+matched exactly with <code>%in%</code>.</p></dd>
 
 
 <dt id="arg-path">path<a class="anchor" aria-label="anchor" href="#arg-path"></a></dt>
@@ -163,12 +186,26 @@ which files are read. Defaults to <code>"*.rds"</code>.</p></dd>
 <dd><p>Additional arguments forwarded to <code><a href="https://rdrr.io/pkg/mse/man/performance.html" class="external-link">mse::performance()</a></code>
 (<code>getOMPerformance()</code> only).</p></dd>
 
+
+<dt id="arg-dry-run">dry_run<a class="anchor" aria-label="anchor" href="#arg-dry-run"></a></dt>
+<dd><p>Logical. If <code>TRUE</code> (default <code>FALSE</code>), return the
+rows that would be deleted without writing any changes.</p></dd>
+
 </dl></div>
     <div id="value">
     <h2>Value</h2>
 
 <dl><dt><code>writePerformance()</code>, <code>setLabelPerformance()</code></dt>
 <dd><p>Invisibly <code>TRUE</code>.</p></dd>
+
+<dt><code>deletePerformance()</code></dt>
+<dd><p>Invisibly, a <code>data.table</code> of the deleted
+rows. When <code>dry_run = TRUE</code>, the rows that would be deleted are
+returned visibly without modifying the file.</p></dd>
+
+<dt><code>diffPerformance()</code></dt>
+<dd><p>A named list with elements <code>new</code>,
+<code>replace</code>, and <code>unchanged</code>, each a <code>data.table</code>.</p></dd>
 
 <dt><code>readPerformance()</code></dt>
 <dd><p>A <code>data.table</code> keyed by <code>om</code>, <code>type</code>, <code>run</code>,
@@ -202,7 +239,27 @@ by row-binding the performance results from all matching files.</p></dd>
     <div id="details">
     <h2>Details</h2>
 
-<dl><dt><code>writePerformance()</code></dt>
+<dl><dt><code>validatePerformance()</code></dt>
+<dd><p>Checks required columns, numeric types,
+NA values in key columns, and key uniqueness; stops or warns on failure.</p></dd>
+
+<dt><code>hasPerformance()</code></dt>
+<dd><p>Returns <code>TRUE</code> if the file contains rows
+matching the supplied identifiers, without loading the full table.</p></dd>
+
+<dt><code>listPerformance()</code></dt>
+<dd><p>Returns a catalogue <code>data.table</code> of
+<code>(om, type, run, mp)</code> combinations with row counts and year ranges.</p></dd>
+
+<dt><code>deletePerformance()</code></dt>
+<dd><p>Deletes rows matching supplied identifiers;
+supports a <code>dry_run</code> preview mode.</p></dd>
+
+<dt><code>diffPerformance()</code></dt>
+<dd><p>Compares an in-memory table against the stored
+file and categorises rows as new, replace, or unchanged.</p></dd>
+
+<dt><code>writePerformance()</code></dt>
 <dd><p>Serializes a table to disk, merging with any
 existing file.</p></dd>
 
@@ -262,9 +319,9 @@ values in <code>data</code> are silently ignored (<code>na.rm = TRUE</code>). Wh
 <code>mp</code>, <code>statistic</code>, <code>name</code>, <code>desc</code>, and <code>iter</code>.</p>
 <p><strong><code>extractPerformance</code></strong></p>
 <p>Operating model baseline rows are identified by an empty string in <code>mp</code>.
-Because matching uses <code>%like%</code>, use anchored patterns (e.g. <code>"^HCR1$"</code>)
-when MP names share substrings. Explicit support for a vector of distinct
-MP names is planned.</p>
+For scalar <code>mp</code>, matching uses <code>%like%</code>; use anchored patterns (e.g.
+<code>"^HCR1$"</code>) when MP names share substrings. For vectors, exact matching
+(<code>%in%</code>) is used.</p>
 <p><strong><code>getOMPerformance</code></strong></p>
 <p>Each <code>.rds</code> file is expected to contain a list-like object with an <code>$om</code>
 component compatible with <code>FLCore::window()</code> and <code><a href="https://rdrr.io/pkg/mse/man/performance.html" class="external-link">mse::performance()</a></code>.
@@ -280,7 +337,25 @@ minor column-structure differences across files.</p>
     <div id="functions">
     <h2>Functions</h2>
 
-<ul><li><p><code>readPerformance()</code>: Read a performance statistics table from disk,
+<ul><li><p><code>validatePerformance()</code>: Validate a performance statistics table,
+checking for required columns, correct numeric types, NA values in key
+columns, and duplicate rows on the composite primary key.</p></li>
+<li><p><code>hasPerformance()</code>: Test whether a stored performance table
+contains rows matching the supplied identifiers, without reading the full
+table into memory.</p></li>
+<li><p><code>listPerformance()</code>: Return a compact catalogue of the
+<code>(om, type, run, mp)</code> combinations stored in a performance file,
+together with row count, year range, and number of distinct iterations —
+without loading the <code>data</code> column.</p></li>
+<li><p><code>deletePerformance()</code>: Delete rows from a stored performance table
+that match the supplied identifiers.  When <code>dry_run = TRUE</code> the rows
+that <em>would</em> be deleted are returned without modifying the file.</p></li>
+<li><p><code>diffPerformance()</code>: Compare an in-memory performance table against
+a stored file and categorise every row as <em>new</em>, <em>replace</em>
+(key exists in file), or <em>unchanged</em> (key exists and values are
+identical).  Returns a named list of three <code>data.table</code>s; the file
+is not modified.</p></li>
+<li><p><code>readPerformance()</code>: Read a performance statistics table from disk,
 restoring column classes, data.table key, column order, and factor levels.</p></li>
 <li><p><code>summaryPerformance()</code>: Print a compact console summary of the number
 of operating models, MP types, and management procedures, together with
@@ -322,6 +397,29 @@ single table.</p></li>
 <span class="r-in"><span><span class="fu">writePerformance</span><span class="op">(</span><span class="va">perf_dat</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">dat</span> <span class="op">&lt;-</span> <span class="fu">readPerformance</span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">dat</span> <span class="op">&lt;-</span> <span class="fu">readPerformance</span><span class="op">(</span><span class="st">"results/performance.dat.gz"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## validatePerformance</span></span></span>
+<span class="r-in"><span><span class="fu">validatePerformance</span><span class="op">(</span><span class="va">perf_dat</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## hasPerformance</span></span></span>
+<span class="r-in"><span><span class="fu">hasPerformance</span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">hasPerformance</span><span class="op">(</span>om <span class="op">=</span> <span class="st">"ple.27.420"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="kw">if</span><span class="op">(</span><span class="op">!</span><span class="fu">hasPerformance</span><span class="op">(</span>om <span class="op">=</span> <span class="st">"ple.27.420"</span>, run <span class="op">=</span> <span class="st">"r01"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu">writePerformance</span><span class="op">(</span><span class="va">perf_dat</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## listPerformance</span></span></span>
+<span class="r-in"><span><span class="fu">listPerformance</span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">listPerformance</span><span class="op">(</span><span class="st">"results/performance.dat.gz"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## diffPerformance</span></span></span>
+<span class="r-in"><span><span class="va">d</span> <span class="op">&lt;-</span> <span class="fu">diffPerformance</span><span class="op">(</span><span class="va">perf_dat</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">d</span><span class="op">$</span><span class="va">replace</span></span></span>
+<span class="r-in"><span><span class="kw">if</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">d</span><span class="op">$</span><span class="va">replace</span><span class="op">)</span> <span class="op">==</span> <span class="fl">0</span><span class="op">)</span> <span class="fu">writePerformance</span><span class="op">(</span><span class="va">perf_dat</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## deletePerformance</span></span></span>
+<span class="r-in"><span><span class="fu">deletePerformance</span><span class="op">(</span>om <span class="op">=</span> <span class="st">"ple.27.420"</span>, run <span class="op">=</span> <span class="st">"r01"</span>, dry_run <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">deletePerformance</span><span class="op">(</span>om <span class="op">=</span> <span class="st">"ple.27.420"</span>, run <span class="op">=</span> <span class="st">"r01"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">deletePerformance</span><span class="op">(</span>mp <span class="op">=</span> <span class="st">"hcr_Fmsy"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co">## summaryPerformance</span></span></span>
 <span class="r-in"><span><span class="fu">summaryPerformance</span><span class="op">(</span><span class="op">)</span></span></span>
