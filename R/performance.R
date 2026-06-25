@@ -9,7 +9,7 @@
 
 globalVariables(c("unit"))
 
-# atomicWrite {{{
+# .atomicWrite {{{
 
 .atomicWrite <- function(db, file) {
   tmp <- paste0(file, ".tmp")
@@ -39,8 +39,8 @@ validatePerformance <- function(dat) {
   if(!is.numeric(dat[["data"]]))
     stop("Column 'data' must be numeric.")
 
-  key_cols <- intersect(c("om", "type", "run", "biol", "statistic", "year", "iter"),
-    names(dat))
+  key_cols <- intersect(c("om", "type", "run", "mp", "biol", "statistic",
+    "year", "iter"), names(dat))
   na_counts <- dat[, lapply(.SD, function(x) sum(is.na(x))), .SDcols = key_cols]
   bad <- names(na_counts)[unlist(na_counts) > 0]
   if(length(bad))
@@ -689,31 +689,31 @@ periodsPerformance <- function(x, periods=list(), ...) {
       as.character(p)
   }))
 
+  end <- unlist(lapply(periods, function(p) {
+    p[length(p)]
+  }))
+
   # ASSIGN names to unnamed periods from year label
   nms <- names(periods)
-  if(is.null(nms)) nms <- rep("", length(periods))
+  if(is.null(nms))
+    nms <- rep("", length(periods))
   nms[nms == ""] <- years[nms == ""]
   names(periods) <- nms
 
   # COMPUTE means per period
   grp <- if("label" %in% colnames(x))
-    quote(.(om, type, mp, label, statistic, name, desc, iter))
+    quote(.(om, biol, type, run, mp, label, statistic, name, desc, iter))
   else
-    quote(.(om, type, mp, statistic, name, desc, iter))
+    quote(.(om, biol, type, run, mp, statistic, name, desc, iter))
 
-  res <- rbindlist(Map(function(pe, na, ye) {
+  res <- rbindlist(Map(function(pe, na, ye, en) {
     x[year %in% pe,
-      .(data=mean(data, na.rm=TRUE), period=na, year=ye),
+      .(data=mean(data, na.rm=TRUE), period=na, year=en, years=ye),
       by=eval(grp)]
-    }, pe=periods, na=names(periods), ye=years))
-
-  # RENAME col to  years
-  setnames(res, "year", "years")
+    }, pe=periods, na=names(periods), ye=years, en=end))
 
   return(res)
 }
-
-
 
 # }}}
 
