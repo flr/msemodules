@@ -18,6 +18,8 @@ Imports:
   ggplotFL,
   FLasher,
   data.table
+Suggests:
+  R.utils
 License: EUPL-1.2
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
