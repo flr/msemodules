@@ -33,6 +33,7 @@ export(
   "depletion.hcr",
   "deletePerformance",
   "effort.is",
+  "decisions",
   "diffPerformance",
   "extractPerformance",
   "getMSEPerformance",
