@@ -666,7 +666,7 @@ setLabelPerformance <- function(file="model/performance.dat.gz", labels) {
 #'   the years belonging to each period.
 #' @keywords manip
 
-periodsPerformance <- function(x, periods=list(), ...) {
+periodsPerformance <- function(x, periods=list(), add=FALSE, ...) {
 
   # COLLECT any named ... args (e.g. short=2026:2030, long=2031:2040)
   dots <- list(...)
@@ -708,9 +708,14 @@ periodsPerformance <- function(x, periods=list(), ...) {
 
   res <- rbindlist(Map(function(pe, na, ye, en) {
     x[year %in% pe,
-      .(data=mean(data, na.rm=TRUE), period=na, year=en, years=ye),
+      .(data=mean(data, na.rm=TRUE), period=na, year=as.numeric(NA), years=ye),
       by=eval(grp)]
     }, pe=periods, na=names(periods), ye=years, en=end))
+
+  # ADD
+  if(add) {
+    res <- rbindlist(list(x, res), fill=TRUE)
+  }
 
   return(res)
 }
