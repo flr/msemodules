@@ -666,7 +666,7 @@ setLabelPerformance <- function(file="model/performance.dat.gz", labels) {
 #'   the years belonging to each period.
 #' @keywords manip
 
-periodsPerformance <- function(x, periods=list(), add=FALSE, ...) {
+periodsPerformance <- function(x, periods=list(), add=TRUE, ...) {
 
   # COLLECT any named ... args (e.g. short=2026:2030, long=2031:2040)
   dots <- list(...)
@@ -716,6 +716,9 @@ periodsPerformance <- function(x, periods=list(), add=FALSE, ...) {
   if(add) {
     res <- rbindlist(list(x, res), fill=TRUE)
   }
+
+  if(add)
+    res <- rbindlist(list(x, res), fill=TRUE)
 
   return(res)
 }
