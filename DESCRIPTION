@@ -19,7 +19,7 @@ Imports:
   FLasher,
   data.table
 Suggests:
-  R.utils
+  R.utils,
   testthat (>= 3.0.0)
 License: EUPL-1.2
 Encoding: UTF-8
