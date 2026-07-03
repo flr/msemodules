@@ -21,7 +21,7 @@ fleet dynamics."><meta property="og:image" content="/logo.png"><!-- mathjax --><
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">msemodules</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.3</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.5</span>
       </span>
     </div>
 
@@ -95,7 +95,7 @@ mortality is calculated. Defaults to <code>args$nsqy</code> as supplied by
 <dt id="arg-fref">Fref<a class="anchor" aria-label="anchor" href="#arg-fref"></a></dt>
 <dd><p>Numeric or <a href="http://flrproject.org/FLCore/reference/FLQuant.html" class="external-link">FLCore::FLQuant</a>. Reference fishing mortality
 used as the denominator when computing the multiplier. Defaults to the
-mean of <code>FLCore::fbar()</code> over the <code>nyears</code> years ending at <code>dy</code> (the
+mean of <code><a href="http://flrproject.org/FLCore/reference/fbar.html" class="external-link">FLCore::fbar()</a></code> over the <code>nyears</code> years ending at <code>dy</code> (the
 final data year).</p></dd>
 
 
@@ -128,7 +128,7 @@ relative to the correct historical year.</p></dd>
     <p>The effort multiplier is defined as
 $$m = \frac{Ftarget}{F_ref}$$
 where \(F_target\) is the value in <code>ctrl$value</code> as set by the
-HCR and \(F_ref\) is the mean <code>FLCore::fbar()</code> over the most
+HCR and \(F_ref\) is the mean <code><a href="http://flrproject.org/FLCore/reference/fbar.html" class="external-link">FLCore::fbar()</a></code> over the most
 recent <code>nyears</code> years of data.</p>
 <p>Setting <code>ctrl$relYear</code> tells <code>FLasher::fwd()</code> to express the effort target
 relative to the effort observed in that reference year, effectively turning
@@ -139,7 +139,7 @@ the absolute F recommendation into a proportional change instruction.</p>
     <div id="see-also">
     <h2>See also</h2>
     <div class="dont-index"><p><code><a href="https://rdrr.io/pkg/mse/man/mp.html" class="external-link">mse::mp()</a></code>, <code><a href="https://rdrr.io/pkg/mse/man/split.is.html" class="external-link">mse::split.is()</a></code>, <code><a href="https://rdrr.io/pkg/mse/man/mpCtrl-class.html" class="external-link">mse::mpCtrl()</a></code>, <code><a href="https://rdrr.io/pkg/mse/man/mseCtrl-class.html" class="external-link">mse::mseCtrl()</a></code>,
-<code>FLCore::fbar()</code></p></div>
+<code><a href="http://flrproject.org/FLCore/reference/fbar.html" class="external-link">FLCore::fbar()</a></code></p></div>
     </div>
     <div id="author">
     <h2>Author</h2>
