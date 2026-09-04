@@ -7,7 +7,7 @@
 # Distributed under the terms of the EUPL-1.2
 
 
-globalVariables(c("unit"))
+globalVariables(c("unit", "..key_cols"))
 
 # .atomicWrite {{{
 
@@ -438,17 +438,19 @@ writePerformance <- function(dat, file="model/performance.dat.gz", overwrite=FAL
   # VALIDATE table
   validatePerformance(dat)
 
-  # SET correct column types
-  dat[, (colnames(dat)) := lapply(.SD, as.character), .SDcols = colnames(dat)]
-  dat[, (c("year", "data")) := lapply(.SD, as.numeric), .SDcols = c("year", "data")]
+  # ADD type if missing
+  if(!"type" %in% names(dat))
+    dat[, type := character(1)]
 
-  # ADD empty type and run if missing
-  if(all(!c("type", "run") %in% names(dat))) {
-    dat[, `:=`(type=character(1), run=character(1), mp=character(1)), ] 
+  # ADD run if missing
+  if(!"run" %in% names(dat))
+    dat[, run := character(1)]
 
   # SET mp from om, type and run
-  } else if (is.null(dat[["mp"]]) & all(c("type", "run") %in% names(dat))) {
+  if (is.null(dat[["mp"]]) & all(c("type", "run") %in% names(dat))) {
     dat[, mp := paste(om, type, run, sep="_")]
+  } else if(!"mp" %in% names(dat)) {
+    dat[, mp := character(1)]
   }
 
   # SET label
@@ -456,9 +458,8 @@ writePerformance <- function(dat, file="model/performance.dat.gz", overwrite=FAL
     dat[, label := ifelse(mp == character(1), om, mp)]
   }
 
-  # SET column order
-  setcolorder(dat, neworder=c('om', 'type', 'run', 'mp', 'biol', 'statistic',
-    'name', 'desc', 'year', 'iter', 'data'))
+  # STANDARDIZE column types and order
+  mse:::.standardizeDT(dat)
 
   # CREATE
   if(!file.exists(file) | overwrite) {
@@ -508,7 +509,7 @@ readPerformance <- function(file="model/performance.dat.gz") {
 
   # FREAD forcing column classes
   dat <- fread(file, colClasses=c(type='character', run='character',
-    mp='character', biol='character', year='numeric', iter='character',
+    mp='character', biol='character', year='integer', iter='integer',
     data='numeric'))
 
   # SET column order FIRST

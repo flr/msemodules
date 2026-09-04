@@ -6,8 +6,9 @@
 #
 # Distributed under the terms of the EUPL-1.2
 
+globalVariables(c("enptarget"))
 
-# smooth-index {{{
+# smooth_index {{{
 smooth_index <- function(x, enp.mult=0.2) {
 
   x[x==0]<-1e3
