@@ -56,7 +56,7 @@ len.ind <- function (stk, idx, args, tracking, indicators="lbar", params,
   # OBTAIN names from functions
   nms <- unlist(lapply(indicators, function(x)
       if(is(x, "function"))
-        find.original.name(x)
+        find_original_name(x)
       else
         x
     ))
