@@ -30,4 +30,3 @@ performance(tes) <- performance(tes, statistic=statistics)
 save(te, tes, file="mse.rda", compress="xz")
 
 # FLombf
-

@@ -14,8 +14,6 @@ load('mse.rda')
 tab <- performance(te)
 res <- performanceFLQuant(te)
 
-performanceFLQuant(tab[iter == 1,])
-
 # CLASS
 expect_true(is(res, "FLQuant"))
 
@@ -38,6 +36,14 @@ writePerformance(dat, file=tmp, overwrite=TRUE)
 # writePerformance should not mutate caller object by reference
 expect_true(is.numeric(dat$year))
 expect_true(is.numeric(dat$data))
+
+# writePerformance should use the mse performance schema
+raw <- data.table::fread(tmp)
+expect_identical(names(raw)[seq_along(mse:::.standardizeDT(data.table::copy(tab)))],
+  names(mse:::.standardizeDT(data.table::copy(tab))))
+expect_true(is.integer(raw$year))
+expect_true(is.integer(raw$iter))
+expect_true(is.numeric(raw$data))
 
 # hasPerformance / listPerformance basic behaviour
 expect_true(hasPerformance(file=tmp))

@@ -6,11 +6,20 @@ import("data.table")
 
 importFrom("stats",
   "dist",
+  "loess",
   "mad",
   "setNames")
 
 importFrom("FLasher",
   "fwdControl")
+
+importFrom("FLife",
+  "lhEql")
+
+importFrom("FLBRP",
+  "brp",
+  "FLBRP",
+  "remap")
 
 importFrom("ggplot2",
   "aes",
@@ -34,11 +43,13 @@ export(
   "deletePerformance",
   "effort.is",
   "decisions",
+  "deplete",
   "diffPerformance",
   "extractPerformance",
   "getMSEPerformance",
   "getOMPerformance",
   "hasPerformance",
+  "initiate",
   "inspect",
   "labelPerformance",
   "listPerformance",
@@ -48,12 +59,19 @@ export(
   "pid.hcr",
   "plot_buffer.hcr",
   "readPerformance",
+  "runOM",
   "setLabelPerformance",
   "shortcut.sa",
   "shortcut_devs",
+  "simulator",
   "summaryPerformance",
   "trackingFLQuant",
   "trackingFLQuants",
   "validatePerformance",
   "writePerformance"
   )
+
+
+exportMethods(
+  "asFLom"
+)
