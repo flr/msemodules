@@ -14,25 +14,25 @@ performanceFLQuants(x)
 \code{data.table}. When \code{x} is an \code{FLmse} or \code{FLmses}, the performance slot is
 extracted automatically via \code{\link[mse:performance]{mse::performance()}}. When \code{x} is a
 \code{data.table}, it must contain at least the columns \code{statistic}, \code{year},
-\code{iter}, \code{data}, and \code{mp}. An optional \code{biol} column — present in outputs
-from \code{\link[mse:mp]{mse::mp()}} on \code{FLombf} operating models — is mapped to the \code{unit}
-dimension of the resulting \link[FLCore:FLQuant]{FLCore::FLQuant}.}
+\code{iter}, \code{data}, and \code{mp}. An optional \code{biol} column, present in outputs
+from \code{\link[mse:mp]{mse::mp()}} on \code{FLombf} operating models, is mapped to the \code{unit}
+dimension of the resulting \link[FLCore:FLQuant-class]{FLCore::FLQuant}.}
 }
 \value{
 \describe{
-\item{\code{performanceFLQuants()}}{A named list of \link[FLCore:FLQuant]{FLCore::FLQuant}
+\item{\code{performanceFLQuants()}}{A named list of \link[FLCore:FLQuant-class]{FLCore::FLQuant}
 objects, one per unique \code{mp} value. The first (\code{quant}) dimension is
 named by \code{statistic}; \code{year} and \code{iter} dimensions correspond to
 simulation years and iterations. When a \code{biol} column is present its
 values populate the \code{unit} dimension.}
 \item{\code{performanceFLQuant()}}{If the list contains exactly one element,
-that \link[FLCore:FLQuant]{FLCore::FLQuant} is returned directly; otherwise the full
+that \link[FLCore:FLQuant-class]{FLCore::FLQuant} is returned directly; otherwise the full
 named list is returned.}
 }
 }
 \description{
 Transforms a performance statistics \code{data.table}, or an \code{FLmse}/\code{FLmses}
-object, into one or more \link[FLCore:FLQuant]{FLCore::FLQuant} objects organized by
+object, into one or more \link[FLCore:FLQuant-class]{FLCore::FLQuant} objects organized by
 management procedure, with statistics in the first (\code{quant}) dimension and
 iterations preserved in the \code{iter} dimension.
 }
@@ -47,7 +47,7 @@ the standard FLQuant dimensions. The \code{statistic} column populates the
 \code{quant} dimension and must therefore contain values meaningful as dimension
 names.
 
-When a \code{biol} column is present, \code{\link[data.table:setattr]{data.table::setnames()}} renames it to
+When a \code{biol} column is present, \code{\link[data.table:setnames]{data.table::setnames()}} renames it to
 \code{unit} before passing to \code{\link[FLCore:as.FLQuant]{FLCore::as.FLQuant()}}, leaving the original table
 unmodified.
 
@@ -57,7 +57,7 @@ contain all required columns (\code{statistic}, \code{year}, \code{iter}, \code{
 \section{Functions}{
 \itemize{
 \item \code{performanceFLQuants()}: Convenience wrapper returning a single
-\link[FLCore:FLQuant]{FLCore::FLQuant} directly when only one management procedure is
+\link[FLCore:FLQuant-class]{FLCore::FLQuant} directly when only one management procedure is
 present, or the full named list otherwise.
 
 }}
@@ -71,14 +71,14 @@ dat <- readPerformance()
 flqs <- performanceFLQuants(dat)
 flqs[["MP1"]]["SSB", , , , ,]
 
-# Convenience wrapper — returns FLQuant directly for a single MP
+# Convenience wrapper, returns FLQuant directly for a single MP
 flq <- performanceFLQuant(dat)
 }
 
 }
 \seealso{
 \code{\link[mse:performance]{mse::performance()}}, \link[mse:FLmse-class]{mse::FLmse}, \link[mse:FLmses-class]{mse::FLmses},
-\link[FLCore:FLQuant]{FLCore::FLQuant}, \code{\link[FLCore:as.FLQuant]{FLCore::as.FLQuant()}}, \code{\link[=readPerformance]{readPerformance()}},
+\link[FLCore:FLQuant-class]{FLCore::FLQuant}, \code{\link[FLCore:as.FLQuant]{FLCore::as.FLQuant()}}, \code{\link[=readPerformance]{readPerformance()}},
 \code{\link[=writePerformance]{writePerformance()}}
 }
 \author{

@@ -14,10 +14,10 @@ effort.is(
 )
 }
 \arguments{
-\item{stk}{An \link[FLCore:FLStock]{FLCore::FLStock} object containing stock and fishery
+\item{stk}{An \link[FLCore:FLStock-class]{FLCore::FLStock} object containing stock and fishery
 information.}
 
-\item{ctrl}{An \link[FLasher:fwdControl]{FLasher::fwdControl} object whose \code{quant} slot must be
+\item{ctrl}{An \link[FLasher:fwdControl-class]{FLasher::fwdControl} object whose \code{quant} slot must be
 one of \code{"f"}, \code{"fbar"}, or \code{"effort"} and whose \code{value} slot carries the
 absolute F target from the HCR.}
 
@@ -25,7 +25,7 @@ absolute F target from the HCR.}
 mortality is calculated. Defaults to \code{args$nsqy} as supplied by
 \code{\link[mse:mp]{mse::mp()}}.}
 
-\item{Fref}{Numeric or \link[FLCore:FLQuant]{FLCore::FLQuant}. Reference fishing mortality
+\item{Fref}{Numeric or \link[FLCore:FLQuant-class]{FLCore::FLQuant}. Reference fishing mortality
 used as the denominator when computing the multiplier. Defaults to the
 mean of \code{\link[FLCore:fbar]{FLCore::fbar()}} over the \code{nyears} years ending at \code{dy} (the
 final data year).}
@@ -33,16 +33,16 @@ final data year).}
 \item{args}{A list of management-cycle dimensionality arguments supplied
 automatically by \code{\link[mse:mp]{mse::mp()}}, including at least \code{dy} and \code{nsqy}.}
 
-\item{tracking}{An \link[FLCore:FLQuant]{FLCore::FLQuant} used to record intermediate
+\item{tracking}{An \link[FLCore:FLQuant-class]{FLCore::FLQuant} used to record intermediate
 values and decisions during MP evaluation, passed through unchanged by
 this method.}
 }
 \value{
 A list with two elements:
 \describe{
-\item{\code{ctrl}}{The input \link[FLasher:fwdControl]{FLasher::fwdControl} object with \code{value}
+\item{\code{ctrl}}{The input \link[FLasher:fwdControl-class]{FLasher::fwdControl} object with \code{value}
 replaced by the dimensionless effort multiplier and \code{relYear} set to
-\code{ctrl$year - data_lag} so that \code{\link[FLasher:fwd-methods]{FLasher::fwd()}} interprets the target
+\code{ctrl$year - data_lag} so that \code{\link[FLasher:fwd]{FLasher::fwd()}} interprets the target
 relative to the correct historical year.}
 \item{\code{tracking}}{The tracking object, returned unchanged.}
 }
@@ -50,7 +50,7 @@ relative to the correct historical year.}
 \description{
 Converts a fishing-mortality target set by an HCR into a relative effort
 multiplier by scaling against a reference fishing mortality computed from
-recent years. Passing a relative effort target to \code{\link[FLasher:fwd-methods]{FLasher::fwd()}} rather
+recent years. Passing a relative effort target to \code{\link[FLasher:fwd]{FLasher::fwd()}} rather
 than an absolute F smooths the response to inter-annual variability in
 fleet dynamics.
 }
@@ -61,7 +61,7 @@ where \eqn{F_target} is the value in \code{ctrl$value} as set by the
 HCR and \eqn{F_ref} is the mean \code{\link[FLCore:fbar]{FLCore::fbar()}} over the most
 recent \code{nyears} years of data.
 
-Setting \code{ctrl$relYear} tells \code{\link[FLasher:fwd-methods]{FLasher::fwd()}} to express the effort target
+Setting \code{ctrl$relYear} tells \code{\link[FLasher:fwd]{FLasher::fwd()}} to express the effort target
 relative to the effort observed in that reference year, effectively turning
 the absolute F recommendation into a proportional change instruction.
 
@@ -89,7 +89,7 @@ plot(om, effort.is = run, no_is = run_nois)
 
 }
 \seealso{
-\code{\link[mse:mp]{mse::mp()}}, \code{\link[mse:split.is]{mse::split.is()}}, \code{\link[mse:mpCtrl-class]{mse::mpCtrl()}}, \code{\link[mse:mseCtrl-class]{mse::mseCtrl()}},
+\code{\link[mse:mp]{mse::mp()}}, \code{\link[mse:split.is]{mse::split.is()}}, \code{\link[mse:mpCtrl]{mse::mpCtrl()}}, \code{\link[mse:mseCtrl]{mse::mseCtrl()}},
 \code{\link[FLCore:fbar]{FLCore::fbar()}}
 }
 \author{

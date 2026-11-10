@@ -32,7 +32,7 @@ biomass deviation process. Currently not used in the implementation, which
 fixes the \code{SSB} autocorrelation at \code{0}. Defaults to \code{0}.}
 
 \item{bias.correct}{Logical. If \code{TRUE}, applies bias correction when
-generating the lognormal AR(1) deviates. Passed to \code{\link[FLCore:rlnormar1]{FLCore::rlnormar1()}}.
+generating the lognormal AR(1) deviates. Passed to \code{\link[FLCore:rlnormar1]{rlnormar1()}}.
 Defaults to \code{FALSE}.}
 }
 \value{
@@ -51,7 +51,7 @@ to fishing mortality and spawning stock biomass metrics.
 The deviations are generated as lognormal autoregressive series and returned
 as an \code{FLQuants} object with components for \code{F} and \code{SSB}.
 
-The function generates deviations using \code{\link[FLCore:rlnormar1]{FLCore::rlnormar1()}}, with:
+The function generates deviations using \code{\link[FLCore:rlnormar1]{rlnormar1()}}, with:
 \itemize{
 \item \code{n = dims(om)$iter} iterations;
 \item \code{years = dimnames(om)$year};
@@ -84,7 +84,7 @@ devs <- shortcut_devs(om, bias.correct = TRUE)
 
 }
 \seealso{
-\code{\link[=shortcut.sa]{shortcut.sa()}}, \code{\link[FLCore:rlnormar1]{FLCore::rlnormar1()}}, \code{\link[FLCore:FLQuants]{FLCore::FLQuants()}}
+\code{\link[=shortcut.sa]{shortcut.sa()}}, \code{\link[FLCore:rlnormar1]{rlnormar1()}}, \code{\link[FLCore:FLQuants]{FLCore::FLQuants()}}
 }
 \author{
 Iago Mosqueira, WMR; Ernesto Jardim, IPMA

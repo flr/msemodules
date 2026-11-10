@@ -51,6 +51,6 @@ When results from multiple management procedures are present, the output is an
 
 }
 \seealso{
-\code{\link[mse:performance]{mse::performance()}}, \link[mse:FLmse-class]{mse::FLmse}, \linkS4class{FLmses}
+\code{\link[mse:performance]{performance()}}, \link[mse:FLmse-class]{FLmse}, \link[=FLmses-class]{FLmses}
 }
 \keyword{manip}

@@ -48,7 +48,7 @@ to compute the HCR metric.}
 \item{ind}{An index object used when computing the selected metric.}
 
 \item{metric}{Character string giving the metric used for the x-axis and,
-when \code{obs} is an \code{FLStock}, the variable extracted from \code{\link[FLCore:metrics]{FLCore::metrics()}}.}
+when \code{obs} is an \code{FLStock}, the variable extracted from \code{\link[FLCore:metrics]{metrics()}}.}
 
 \item{target}{Numeric. Target value of the metric.}
 
@@ -75,7 +75,7 @@ when \code{obs} is an \code{FLStock}, the variable extracted from \code{\link[FL
 
 \item{scale}{Logical. If \code{TRUE}, do not recover previous output from tracking.}
 
-\item{...}{Additional arguments passed to \code{\link[mse:selectMetric]{mse::selectMetric()}}.}
+\item{...}{Additional arguments passed to \code{\link[mse:selectMetric]{selectMetric()}}.}
 
 \item{args}{A list of arguments defining the buffer HCR. Typically includes
 values such as \code{lim}, \code{bufflow}, \code{buffupp}, \code{sloperatio}, and optionally
@@ -102,7 +102,7 @@ among \code{lim}, \code{bufflow}, \code{buffupp}, \code{metric}, and \code{outpu
 override the defaults.}
 
 \item{output}{Character string giving the output used for the y-axis and,
-when \code{obs} is an \code{FLStock}, the variable extracted from \code{\link[FLCore:metrics]{FLCore::metrics()}}.}
+when \code{obs} is an \code{FLStock}, the variable extracted from \code{\link[FLCore:metrics]{metrics()}}.}
 
 \item{xlim}{Numeric. Maximum x-axis value for the HCR plot. By default set to
 \code{buffupp * 1.5}.}
@@ -121,8 +121,8 @@ For \code{\link[=plot_buffer.hcr]{plot_buffer.hcr()}}, a \code{ggplot2} object.
 
 For \code{\link[=buffer_bands]{buffer_bands()}}, a list of ggplot2 components:
 \itemize{
-\item a \code{\link[ggplot2:geom_tile]{ggplot2::geom_rect()}} layer that draws shaded tier bands;
-\item a \code{\link[ggplot2:scale_manual]{ggplot2::scale_fill_manual()}} layer that assigns colours to tiers.
+\item a \code{\link[ggplot2:geom_rect]{ggplot2::geom_rect()}} layer that draws shaded tier bands;
+\item a \code{\link[ggplot2:scale_fill_manual]{ggplot2::scale_fill_manual()}} layer that assigns colours to tiers.
 }
 }
 \description{
@@ -174,7 +174,7 @@ rule parameters and returns a ggplot object. The plot includes:
 }
 
 If \code{obs} is an \code{FLStock} object, the function extracts the chosen \code{metric}
-and \code{output} values using \code{\link[FLCore:metrics]{FLCore::metrics()}} and overlays them on the HCR curve. If
+and \code{output} values using \code{\link[FLCore:metrics]{metrics()}} and overlays them on the HCR curve. If
 there is a single iteration, both points and a path are added, and first/last
 years are labelled.
 
@@ -203,7 +203,7 @@ existing fill scale in a ggplot object.
 depend on objects created after argument expansion and may rely on the
 surrounding evaluation framework.
 \item \code{plot_buffer.hcr()} currently uses internal helper functions such as
-\code{\link[FLCore:spread]{FLCore::spread()}}, \code{\link[=args]{args()}}, and \code{\link[FLCore:metrics]{FLCore::metrics()}}, and assumes these are available.
+\code{\link[FLCore:spread]{spread()}}, \code{\link[=args]{args()}}, and \code{\link[FLCore:metrics]{metrics()}}, and assumes these are available.
 }
 }
 
@@ -225,8 +225,8 @@ p
 \seealso{
 \code{\link[=plot_buffer.hcr]{plot_buffer.hcr()}}
 
-\code{\link[=args]{args()}}, \code{\link[FLCore:metrics]{FLCore::metrics()}}, \code{\link[ggplot2:geom_path]{ggplot2::geom_line()}},
-\code{\link[ggplot2:geom_tile]{ggplot2::geom_rect()}}, \code{\link[ggplot2:scale_manual]{ggplot2::scale_fill_manual()}}
+\code{\link[=args]{args()}}, \code{\link[FLCore:metrics]{metrics()}}, \code{\link[ggplot2:geom_line]{ggplot2::geom_line()}},
+\code{\link[ggplot2:geom_rect]{ggplot2::geom_rect()}}, \code{\link[ggplot2:scale_fill_manual]{ggplot2::scale_fill_manual()}}
 }
 \author{
 Iago Mosqueira, WMR; Richard Hillary, CSIRO

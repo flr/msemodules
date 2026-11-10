@@ -37,11 +37,11 @@ compatible object.}
 \code{SSBdevs}.}
 
 \item{args}{A list-like object containing dimensions and assessment settings
-needed by \code{\link[FLCore:spread]{FLCore::spread()}}. In particular, this function assumes that variables
+needed by \code{\link[FLCore:spread]{spread()}}. In particular, this function assumes that variables
 such as \code{dy}, \code{y0}, \code{ay}, and \code{stock} become available after calling
 \code{spread(args)}.}
 
-\item{tracking}{A tracking object updated in-place through  to record
+\item{tracking}{A tracking object updated in-place through \link[mse:`track()<-`]{mse::\verb{track()<-}} to record
 convergence of the shortcut assessment.}
 
 \item{...}{Additional arguments passed to the metric function named in
@@ -71,13 +71,13 @@ state and observation-error-like deviations.
 
 The function proceeds as follows:
 \enumerate{
-\item values in \code{args} are unpacked using \code{\link[FLCore:spread]{FLCore::spread()}};
+\item values in \code{args} are unpacked using \code{\link[FLCore:spread]{spread()}};
 \item the stock object is truncated to \code{end=dy} using \code{\link[=window]{window()}};
 \item the requested metric is computed by calling the function named in
 \code{metric} on \code{stk};
-\item the result is collapsed across units using \code{\link[FLCore:dimSummaries]{FLCore::unitSums()}};
+\item the result is collapsed across units using \code{\link[FLCore:unitSums]{unitSums()}};
 \item stochastic deviations are applied over the period from \code{y0} to \code{dy};
-\item the resulting quantity is wrapped in an \code{\link[FLCore:FLQuants]{FLCore::FLQuants()}} object and named
+\item the resulting quantity is wrapped in an \code{\link[FLCore:FLQuants]{FLQuants()}} object and named
 with the selected metric;
 \item convergence is recorded in \code{tracking} by setting
 \code{"conv.est"} to \code{1} for year \code{ay} and biological unit \code{stock}.

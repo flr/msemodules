@@ -30,7 +30,7 @@ to compute the selected metric.}
 \item{ind}{An FLQuant object containing metrics to be used by the HCR.}
 
 \item{metric}{Character string specifying the metric to use in the HCR.
-Passed to \code{\link[mse:selectMetric]{mse::selectMetric()}}. Defaults to \code{"ssb"}.}
+Passed to \code{\link[mse:selectMetric]{selectMetric()}}. Defaults to \code{"ssb"}.}
 
 \item{mult}{Numeric multiplier applied to the harvest rate after scaling by
 the decision rule. Defaults to \code{1}.}
@@ -64,7 +64,7 @@ Defaults to \code{TRUE}.}
 
 \item{...}{Additional arguments intended for downstream metric calculation.}
 
-\item{args}{A list of auxiliary framework arguments unpacked by \code{\link[FLCore:spread]{FLCore::spread()}}.
+\item{args}{A list of auxiliary framework arguments unpacked by \code{\link[FLCore:spread]{spread()}}.
 The function expects at least \code{ay}, \code{iy}, \code{dy}, \code{mys}, \code{data_lag},
 \code{management_lag}, and \code{it}.}
 
@@ -90,7 +90,7 @@ whether the stock is above a trigger level, between a limit and trigger, or
 below the limit.
 
 The function first computes the selected metric from \code{stk} and \code{ind} using
-\code{\link[mse:selectMetric]{mse::selectMetric()}}, restricted to the terminal data year \code{dy}. This metric is
+\code{\link[mse:selectMetric]{selectMetric()}}, restricted to the terminal data year \code{dy}. This metric is
 tracked under \code{"metric.hcr"}.
 
 Stock status is then expressed as the depletion ratio:
@@ -130,7 +130,7 @@ object in later years. The provisional output is then capped and/or floored
 according to the specified proportional limits.
 
 Finally, missing values are replaced with zero and the result is converted to
-an \code{\link[FLasher:fwdControl]{FLasher::fwdControl()}} object with one catch target per management year.
+an \code{\link[FLasher:fwdControl]{fwdControl()}} object with one catch target per management year.
 }
 \section{Change constraints}{
 
@@ -147,7 +147,7 @@ or above the trigger level.
 \item The function assumes \code{spread(args[...])} creates \code{ay}, \code{iy}, \code{dy},
 \code{mys}, and \code{it} in scope.
 \item Although \code{...} is declared, it is not currently passed on in the call
-to \code{\link[mse:selectMetric]{mse::selectMetric()}} in the implementation shown.
+to \code{\link[mse:selectMetric]{selectMetric()}} in the implementation shown.
 \item The previous output retrieval uses
 \code{tracking[metric == 'hcr' & year == ay, data]}, which assumes a specific
 internal structure for \code{tracking}.
@@ -159,7 +159,7 @@ at assessment year resolution.
 }
 
 \seealso{
-\code{\link[=buffer.hcr]{buffer.hcr()}}, \code{\link[mse:selectMetric]{mse::selectMetric()}}, \code{\link[FLasher:fwdControl]{FLasher::fwdControl()}},
+\code{\link[=buffer.hcr]{buffer.hcr()}}, \code{\link[mse:selectMetric]{selectMetric()}}, \code{\link[FLasher:fwdControl]{fwdControl()}}, \link[mse:`track()<-`]{mse::\verb{track()<-}}
 }
 \author{
 Iago Mosqueira, WMR

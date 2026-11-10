@@ -8,10 +8,10 @@
 # Distributed under the terms of the European Union Public Licence (EUPL) V.1.1.
 
 
-globalVariables(c(".", "ay", "bufflow", "buffupp", "data_lag", "data",
-  "dy", "frq", "fy", "iy", "lim", "management_lag", "min", "mys",
-  "xmin", "xmax", "label", "element", "label", "run", "statistic",
-  "sloperatio", "year"))
+globalVariables(c(".", "ay", "bufflow", "buffupp", "data", "data_lag", "dy",
+  "element", "frq", "fy", "iy", "label", "lim", "lim2","management_lag",
+  "min", "mys", "output", "run", "sloperatio", "statistic", "target", "target2",
+  "trigger", "trigger2", "xmax", "xmin", "year"))
 
 # buffer.hcr {{{
 
@@ -650,7 +650,7 @@ pid.hcr <- function(stk, ind, ref, metric=ssb, initial, kp=0, ki=0, kd=0,
   track(tracking, "decision.hcr", ay) <- u
 
   # COMPUTE factor
-  fac <- min(max(exp(u^1), exp(u^2)), exp(u^3))
+  fac <- pmin(pmax(exp(u^1), exp(u^2)), exp(u^3))
 
   # TAC, set to 0 if NA
   tac <- ifelse(is.na(fac * initial), 0, fac * initial)
@@ -785,9 +785,8 @@ cpue.hcr <- function(stk, ind, k1=0.2, k2=0.2, k3=0.2, k4=0.2, target=1,
 #' plot_doubletop.hcr(ctrl)
 
 doubletop.hcr <- function(stk, ind, target, trigger, lim=0, min=0, drop=0,
-  lim2, trigger2, target2,
-  metric="ssb", output="fbar", dlow=NULL, dupp=NULL, all=TRUE, initial=NULL,
-  args, tracking, ...) {
+  lim2, trigger2, target2, metric="ssb", output="fbar", dlow=NULL, dupp=NULL,
+  all=TRUE, initial=NULL, args, tracking, ...) {
 
   # EXTRACT args
   spread(args)
@@ -912,7 +911,7 @@ doubletop.hcr <- function(stk, ind, target, trigger, lim=0, min=0, drop=0,
 plot_doubletop.hcr <- function(args, obs=NULL,
   kobe=FALSE, xtarget=NULL, alpha=0.3,
   labels=c(lim="lim", trigger="trigger", min="min", target="target",
-           lim2="lim2", trigger2="trigger2", target2="target2", drop="drop")) {
+    lim2="lim2", trigger2="trigger2", target2="target2", drop="drop")) {
 
   # EXTRACT args from mpCtrl
   if(is(args, "mseCtrl"))
@@ -992,7 +991,7 @@ plot_doubletop.hcr <- function(args, obs=NULL,
     annotate("label", x=trigger2, y=min + ylim / 10, label=labels$trigger2,
       vjust="bottom", parse=TRUE, fill=flpalette[2], alpha=0.5) +
     # HCR line
-    geom_line(size=1)
+    geom_line(linewidth=1)
 
   # ADD drop annotation
   if(!is.null(args$drop) & args$drop != 0) {
