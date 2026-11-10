@@ -321,6 +321,7 @@ initiate <- function(biol, B0, h=0.75) {
 #'
 #' @examples
 #' data(ple4.biol)
+#' data(ple4)
 #' ini <- initiate(propagate(ple4.biol, 100), B0=runif(100, 3e5, 5e5))
 #' dep <- deplete(ini, sel=catch.sel(ple4)[, 10], dep=runif(100, 0.10, 0.90))
 

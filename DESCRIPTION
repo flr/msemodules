@@ -19,6 +19,8 @@ Imports:
   FLasher,
   FLife,
   FLBRP,
+  foreach,
+  doFuture,
   data.table
 Suggests:
   R.utils,

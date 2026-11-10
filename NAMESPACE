@@ -18,6 +18,7 @@ importFrom("FLife",
 
 importFrom("FLBRP",
   "brp",
+  "fbar<-",
   "FLBRP",
   "remap")
 
@@ -35,6 +36,13 @@ importFrom("ggplot2",
   "ylab"
   )
 
+importFrom("foreach",
+  "%do%",
+  "foreach")
+
+importFrom("doFuture",
+  "%dofuture%")
+
 export(
   "bank_borrow.is",
   "buffer_bands",
@@ -45,6 +53,7 @@ export(
   "decisions",
   "deplete",
   "diffPerformance",
+  "doubletop.hcr",
   "extractPerformance",
   "getMSEPerformance",
   "getOMPerformance",
@@ -58,6 +67,7 @@ export(
   "periodsPerformance",
   "pid.hcr",
   "plot_buffer.hcr",
+  "plot_doubletop.hcr",
   "readPerformance",
   "runOM",
   "setLabelPerformance",

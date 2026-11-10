@@ -991,7 +991,7 @@ plot_doubletop.hcr <- function(args, obs=NULL,
     annotate("label", x=trigger2, y=min + ylim / 10, label=labels$trigger2,
       vjust="bottom", parse=TRUE, fill=flpalette[2], alpha=0.5) +
     # HCR line
-    geom_line(size=1)
+    geom_line(linewidth=1)
 
   # ADD drop annotation
   if(!is.null(args$drop) & args$drop != 0) {
