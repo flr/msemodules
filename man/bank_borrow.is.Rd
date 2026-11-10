@@ -16,9 +16,9 @@ bank_borrow.is(
 )
 }
 \arguments{
-\item{stk}{An \link[FLCore:FLStock]{FLCore::FLStock} object representing the stock.}
+\item{stk}{An \link[FLCore:FLStock-class]{FLCore::FLStock} object representing the stock.}
 
-\item{ctrl}{An \link[FLasher:fwdControl]{FLasher::fwdControl} object carrying the TAC
+\item{ctrl}{An \link[FLasher:fwdControl-class]{FLasher::fwdControl} object carrying the TAC
 recommendation to be adjusted.}
 
 \item{args}{A list of management-cycle dimensionality arguments supplied
@@ -41,14 +41,14 @@ action. Defaults to \code{0.15}, i.e. a 15\% change.}
 required for the stock to be considered healthy enough for banking or
 borrowing to be applied. Defaults to \code{1}.}
 
-\item{tracking}{An \link[FLCore:FLQuant]{FLCore::FLQuant} used to record intermediate
+\item{tracking}{An \link[FLCore:FLQuant-class]{FLCore::FLQuant} used to record intermediate
 values and decisions during MP evaluation, passed through and updated by
 \code{\link[mse:mp]{mse::mp()}}.}
 }
 \value{
 A list with two elements:
 \describe{
-\item{\code{ctrl}}{The input \link[FLasher:fwdControl]{FLasher::fwdControl} object with the
+\item{\code{ctrl}}{The input \link[FLasher:fwdControl-class]{FLasher::fwdControl} object with the
 adjusted TAC stored in \code{ctrl$value}.}
 \item{\code{tracking}}{The updated tracking object, with \code{borrowing.isys} and
 \code{banking.isys} metrics written for the assessment year \code{ay}.}
@@ -110,7 +110,7 @@ dcast(
 
 }
 \seealso{
-\code{\link[mse:mp]{mse::mp()}}, \code{\link[mse:mpCtrl-class]{mse::mpCtrl()}}, \code{\link[mse:mseCtrl-class]{mse::mseCtrl()}}
+\code{\link[mse:mp]{mse::mp()}}, \code{\link[mse:mpCtrl]{mse::mpCtrl()}}, \code{\link[mse:mseCtrl]{mse::mseCtrl()}}
 }
 \author{
 Iago MOSQUEIRA \href{mailto:iago.mosqueira@wur.nl}{iago.mosqueira@wur.nl}

@@ -7,18 +7,61 @@
 # Distributed under the terms of the EUPL-1.2
 
 
-# asFLom {{{
-
 setGeneric("asFLom", function(object, ...) standardGeneric("asFLom"))
 
-# FLa4a
+# as.FLom(a4aFitSA) {{{
+
+#' Build an FLom operating model from an FLa4a stock assessment fit
+#'
+#' Converts an `a4aFitSA` stock assessment fit into an `FLom` operating model.
+#' Simulation draws from the fit are added to the input FLStock, `stk`, a
+#' stock-recruitment relationship is fitted (jointly across iterations, or to the
+#' iteration's median, depending on `sa2sr`), and reference points are calculated with
+#' [FLBRP()] and remapped to `Blim`, `Bsafe`, `FMSY`, `SBMSY`, `BMSY`, `B0`,
+#' and `SB0`. The resulting `FLom` is then extended to `fy` with
+#' [fwdWindow()].
+#' The method:
+#' \itemize{
+#'   \item Simulates stock trajectories from the assessment fit
+#'   \item Updates the stock with simulated values
+#'   \item Fits a stock-recruitment relationship using FLSR and fmle
+#'   \item Generates autocorrelated lognormal S/R deviances for projection
+#'   \item Calculates biological reference points using FLBRP
+#'   \item Maps reference points to standard names (Blim, Bsafe, FMSY, etc.)
+#'   \item Extends the operating model to the final year using fwdWindow
+#' }
+#' This method requires the `FLa4a` package.
+#'
+#' @param object An `a4aFitSA` stock assessment fit.
+#' @param stk The `FLStock` associated with `object`, updated with the
+#'   simulated variability from the fit.
+#' @param sr_model Stock-recruitment model to fit, as accepted by
+#'   [as.FLSR()].
+#' @param fy Final year to extend the operating model to.
+#' @param it Number of simulations to draw from `object`. Defaults to 1.
+#' @param nsq Number of years to average over when extending the stock,
+#'   passed to [fwdWindow()]. Defaults to 3.
+#' @param sa2sr If `TRUE` (default), the stock-recruitment model is fitted
+#'   using all iterations of `stk`. If `FALSE`, it is fitted to the
+#'   iteration medians instead.
+#' @param refpts A named list identifying, by name, the `FLBRP` reference
+#'   points to use as `Bsafe`, `Blim`, and `FMSY`.
+#' @param ... Additional arguments passed to [fwdWindow()].
+#'
+#' @return An object of class `FLom`.
+#'
+#' @name asFLom
+#' @rdname asFLom
+#' @aliases asFLom,a4aFitSA-method
+#' @usage asFLom(object, stk, sr_model, fy, it=1, nsq=3, sa2sr=TRUE,
+#'   refpts=list(bsafe = "spr.40", blim = "spr.20", fmsy = "f0.1"), ...)
 
 .asFLoma4aFitSA <- function() {
 
 setMethod("asFLom", signature(object="a4aFitSA"),
 
 function(object, stk, sr_model, fy, it=1, nsq=3, sa2sr=TRUE,
-  refpts=list(bsafe = "spr.40", blim = "spr.20", fmsy = "f0.1"), ...){
+  refpts=list(Bsafe = "spr.40", Blim = "spr.20", FMSY = "f0.1"), ...){
 
   # CHECK for FLa4a
   if (!requireNamespace("FLa4a", quietly = TRUE)) {
@@ -60,10 +103,10 @@ function(object, stk, sr_model, fy, it=1, nsq=3, sa2sr=TRUE,
   
   om.brp <- brp(om.brp)
 
-  # NOTE: Blim, Btrigger
+  # SET UP linear refpts
   rp <- remap(refpts(om.brp),
-    map=list(BLIM=c(refpts$blim, "ssb"), BSAFE = c(refpts$bsafe, "ssb"),
-        FMSY = c(refpts$fmsy, "harvest"), SBMSY = c("msy", "ssb"),
+    map=list(Blim=c(refpts$Blim, "ssb"), Bsafe = c(refpts$Bsafe, "ssb"),
+        FMSY = c(refpts$FMSY, "harvest"), SBMSY = c("msy", "ssb"),
         BMSY = c("msy", "biomass"), B0 = c("virgin", "biomass"),
         SB0 = c("virgin", "ssb")))
 

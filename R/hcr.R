@@ -650,7 +650,7 @@ pid.hcr <- function(stk, ind, ref, metric=ssb, initial, kp=0, ki=0, kd=0,
   track(tracking, "decision.hcr", ay) <- u
 
   # COMPUTE factor
-  fac <- min(max(exp(u^1), exp(u^2)), exp(u^3))
+  fac <- pmin(pmax(exp(u^1), exp(u^2)), exp(u^3))
 
   # TAC, set to 0 if NA
   tac <- ifelse(is.na(fac * initial), 0, fac * initial)
